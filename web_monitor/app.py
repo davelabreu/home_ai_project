@@ -201,6 +201,15 @@ def deploy_action(action_name):
     app.logger.info(f"Received request to deploy action: {action_name}")
     return jsonify({'status': 'success', 'message': f'Deployment action "{action_name}" received and will be processed.'})
 
+@app.route('/api/config')
+def get_config():
+    """
+    Returns configuration information to the frontend,
+    specifically whether MONITOR_TARGET_HOST is set.
+    """
+    return jsonify({
+        'monitor_target_host_set': bool(MONITOR_TARGET_HOST)
+    })
 
 if __name__ == '__main__':
     # When this script is executed directly, run the Flask development server.
