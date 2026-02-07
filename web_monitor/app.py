@@ -6,6 +6,11 @@ import os # Import os for path manipulation
 import datetime # Import datetime for uptime calculation
 import sys # Import sys
 import requests # Import requests
+from dotenv import load_dotenv # Import load_dotenv
+
+# Load environment variables from .env file
+# This should be called as early as possible.
+load_dotenv()
 
 # Determine the base directory of the Flask app
 # This assumes app.py is directly in home_ai_project/web_monitor/
