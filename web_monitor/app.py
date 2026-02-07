@@ -35,6 +35,15 @@ app = Flask(
 def serve_index():
     return render_template('index.html')
 
+@app.route('/<path:filename>')
+def serve_static_root_files(filename):
+    """
+    Serve static files that are in the root of the 'frontend/dist' directory.
+    This is necessary for assets like 'favicon.ico' or directly referenced SVGs
+    that Vite places in the root of the build output.
+    """
+    return send_from_directory(app.template_folder, filename)
+
 @app.route('/api/local_network_status')
 def get_local_network_status():
     """
