@@ -14,7 +14,7 @@ import NvidiaLogo from '/nvidia_logo.svg';
 function App() {
   const { local: localSystem, remote: remoteSystem } = useSystemInfo();
   const { local: localNetwork, remote: remoteNetwork } = useNetworkStatus();
-  const { monitor_target_host_set, loading: configLoading, error: configError } = useConfig();
+  const { monitor_target_host_set, monitorTargetHost, loading: configLoading, error: configError } = useConfig(); // Destructure monitorTargetHost
   const [rebootMessage, setRebootMessage] = useState<string | null>(null);
 
   // Determine header content based on configuration
@@ -25,9 +25,14 @@ function App() {
       return;
     }
 
-    setRebootMessage("Attempting to reboot remote host...");
+    if (!monitorTargetHost) {
+      setRebootMessage("Reboot failed: Remote host IP is not configured.");
+      return;
+    }
+
+    setRebootMessage(`Attempting to reboot remote host (${monitorTargetHost})...`);
     try {
-      const response = await fetch('/api/command/reboot', { method: 'POST' });
+      const response = await fetch(`http://${monitorTargetHost}:5000/api/command/reboot`, { method: 'POST' }); // Use absolute URL
       const data = await response.json();
 
       if (response.ok) {

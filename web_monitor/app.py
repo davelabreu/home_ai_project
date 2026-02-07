@@ -214,10 +214,11 @@ def deploy_action(action_name):
 def get_config():
     """
     Returns configuration information to the frontend,
-    specifically whether MONITOR_TARGET_HOST is set.
+    specifically whether MONITOR_TARGET_HOST is set and its value.
     """
     return jsonify({
-        'monitor_target_host_set': bool(MONITOR_TARGET_HOST)
+        'monitor_target_host_set': bool(MONITOR_TARGET_HOST),
+        'monitor_target_host': MONITOR_TARGET_HOST # Return the actual value
     })
 
 from flask import request # Import request for handling POST data
