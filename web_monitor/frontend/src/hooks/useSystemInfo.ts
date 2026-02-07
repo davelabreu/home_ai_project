@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useConfig } from './useConfig'; // Import useConfig
 
 export interface SystemInfo {
   cpu_percent: number;
@@ -29,6 +30,7 @@ export const useSystemInfo = () => {
     local: { info: null, error: null, loading: true },
     remote: { info: null, error: null, loading: true },
   });
+  const { monitorTargetHost, monitor_target_host_set } = useConfig(); // Get monitorTargetHost and set status
 
   useEffect(() => {
     const fetchLocalInfo = async () => {
@@ -49,8 +51,12 @@ export const useSystemInfo = () => {
     };
 
     const fetchRemoteInfo = async () => {
+      if (!monitor_target_host_set || !monitorTargetHost) {
+        setStatus((prev) => ({ ...prev, remote: { info: null, error: "Remote host not configured.", loading: false } }));
+        return;
+      }
       try {
-        const response = await fetch('/api/remote_system_info');
+        const response = await fetch(`http://${monitorTargetHost}:8050/api/local_system_info`); // Use local_system_info on remote host
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -73,7 +79,7 @@ export const useSystemInfo = () => {
     }, 5000); // Refresh every 5 seconds
 
     return () => clearInterval(interval);
-  }, []);
+  }, [monitorTargetHost, monitor_target_host_set]); // Add monitorTargetHost to dependency array
 
   return status;
 };
