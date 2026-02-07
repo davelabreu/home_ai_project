@@ -6,19 +6,35 @@ import { useNetworkStatus } from './hooks/useNetworkStatus'; // Import the updat
 import { useConfig } from './hooks/useConfig'; // Import the new config hook
 import './index.css'; // Tailwind CSS directives
 
+// Import the SVG logos
+import DesktopIcon from '/desktop_icon.svg'; 
+import NvidiaLogo from '/nvidia_logo.svg';
+
 function App() {
   const { local: localSystem, remote: remoteSystem } = useSystemInfo();
   const { local: localNetwork, remote: remoteNetwork } = useNetworkStatus();
   const { monitor_target_host_set, loading: configLoading, error: configError } = useConfig();
 
+  // Determine header content based on configuration
+  const isJetsonApp = !monitor_target_host_set; // If MONITOR_TARGET_HOST is not set, this is the Jetson's local app
+
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4">
       <header className="py-6 border-b border-gray-200 dark:border-gray-700">
-        <div className="container mx-auto px-4">
-          <h1 className="text-3xl font-bold text-center">Home AI Monitor Dashboard</h1>
-          <p className="text-center text-gray-600 dark:text-gray-400">
-            Monitor your local machine and, if configured, a remote host (e.g., Jetson).
-          </p>
+        <div className="container mx-auto px-4 flex items-center justify-center space-x-4">
+          {isJetsonApp ? (
+            <img src={NvidiaLogo} alt="Nvidia Logo" className="h-10 w-auto" />
+          ) : (
+            <img src={DesktopIcon} alt="Desktop Icon" className="h-10 w-auto" />
+          )}
+          <div>
+            <h1 className="text-3xl font-bold text-center">
+              {isJetsonApp ? "Jetson Dashboard" : "PC Dashboard"}
+            </h1>
+            <p className="text-center text-gray-600 dark:text-gray-400">
+              {isJetsonApp ? "Monitor your Jetson." : "Monitor your local PC and a remote host."}
+            </p>
+          </div>
         </div>
       </header>
       <main className="container mx-auto px-4 py-8">
@@ -29,28 +45,30 @@ function App() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             {/* Local System Info */}
             <SystemInfoCard 
-              title="Local Machine System Status" 
+              title={isJetsonApp ? "Jetson System Status" : "Local PC System Status"} 
               systemInfo={localSystem.info} 
               error={localSystem.error} 
               loading={localSystem.loading} 
             />
 
             {/* Remote System Info (conditionally rendered) */}
-            {monitor_target_host_set && (
+            {monitor_target_host_set ? (
               <SystemInfoCard 
                 title="Remote Host System Status" 
                 systemInfo={remoteSystem.info} 
                 error={remoteSystem.error} 
                 loading={remoteSystem.loading} 
               />
-            )}
-             {!monitor_target_host_set && remoteSystem.error && !remoteSystem.loading && (
-              <SystemInfoCard 
-                title="Remote Host System Status (Not Configured)" 
-                systemInfo={null} 
-                error={remoteSystem.error} 
-                loading={remoteSystem.loading} 
-              />
+            ) : (
+              // Only display 'Not Configured' message if we're on the PC app AND remote is not configured
+              !remoteSystem.loading && remoteSystem.error && (
+                <SystemInfoCard 
+                  title="Remote Host System Status (Not Configured)" 
+                  systemInfo={null} 
+                  error={remoteSystem.error} 
+                  loading={remoteSystem.loading} 
+                />
+              )
             )}
           </div>
         )}
@@ -59,28 +77,30 @@ function App() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Local Network Status */}
             <NetworkStatusCard 
-              title="Local Machine Network Devices" 
+              title={isJetsonApp ? "Jetson Network Devices" : "Local PC Network Devices"} 
               networkStatus={localNetwork.devices} 
               error={localNetwork.error} 
               loading={localNetwork.loading} 
             />
 
             {/* Remote Network Status (conditionally rendered) */}
-            {monitor_target_host_set && (
+            {monitor_target_host_set ? (
               <NetworkStatusCard 
                 title="Remote Host Network Devices" 
                 networkStatus={remoteNetwork.devices} 
                 error={remoteNetwork.error} 
                 loading={remoteNetwork.loading} 
               />
-            )}
-            {!monitor_target_host_set && remoteNetwork.error && !remoteNetwork.loading && (
-              <NetworkStatusCard 
-                title="Remote Host Network Devices (Not Configured)" 
-                networkStatus={[]} 
-                error={remoteNetwork.error} 
-                loading={remoteNetwork.loading} 
-              />
+            ) : (
+              // Only display 'Not Configured' message if we're on the PC app AND remote is not configured
+              !remoteNetwork.loading && remoteNetwork.error && (
+                <NetworkStatusCard 
+                  title="Remote Host Network Devices (Not Configured)" 
+                  networkStatus={[]} 
+                  error={remoteNetwork.error} 
+                  loading={remoteNetwork.loading} 
+                />
+              )
             )}
           </div>
         )}
@@ -99,5 +119,4 @@ function App() {
     </div>
   );
 }
-
 export default App;
