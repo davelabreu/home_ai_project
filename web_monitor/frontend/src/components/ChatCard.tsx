@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { useConfig } from '../../hooks/useConfig'; // Import useConfig
 
 interface Message {
   text: string;
@@ -13,6 +14,7 @@ const ChatCard: React.FC = () => {
   const [inputMessage, setInputMessage] = useState<string>('');
   const [isSending, setIsSending] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { monitor_target_host_set, monitorTargetHost, loading: configLoading } = useConfig();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -24,6 +26,10 @@ const ChatCard: React.FC = () => {
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
+    if (!monitorTargetHost) { // Should not happen if card is conditionally rendered, but as a safeguard
+      setMessages((prev) => [...prev, { text: "Error: Remote host not configured for chat.", sender: "ollama" }]);
+      return;
+    }
 
     const newUserMessage: Message = { text: inputMessage, sender: 'user' };
     setMessages((prevMessages) => [...prevMessages, newUserMessage]);
@@ -31,7 +37,8 @@ const ChatCard: React.FC = () => {
     setIsSending(true);
 
     try {
-      const response = await fetch('/api/chat', {
+      const chatApiUrl = `http://${monitorTargetHost}:5000/api/chat`; // Absolute URL
+      const response = await fetch(chatApiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -53,6 +60,8 @@ const ChatCard: React.FC = () => {
       setIsSending(false);
     }
   };
+
+  const isChatDisabled = !monitor_target_host_set || configLoading;
 
   return (
     <Card className="col-span-1 md:col-span-2 lg:col-span-1 h-[500px] flex flex-col">
@@ -79,6 +88,11 @@ const ChatCard: React.FC = () => {
           ))}
           <div ref={messagesEndRef} />
         </div>
+        {isChatDisabled && (
+          <p className="text-center text-red-500 mt-2">
+            Chat is only available when monitoring a remote host.
+          </p>
+        )}
         <div className="flex mt-auto space-x-2 p-2 border-t dark:border-gray-700">
           <Input
             type="text"
@@ -86,14 +100,14 @@ const ChatCard: React.FC = () => {
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyPress={(e) => {
-              if (e.key === 'Enter' && !isSending) {
+              if (e.key === 'Enter' && !isSending && !isChatDisabled) {
                 handleSendMessage();
               }
             }}
-            disabled={isSending}
+            disabled={isSending || isChatDisabled}
             className="flex-1"
           />
-          <Button onClick={handleSendMessage} disabled={isSending}>
+          <Button onClick={handleSendMessage} disabled={isSending || isChatDisabled}>
             {isSending ? 'Sending...' : 'Send'}
           </Button>
         </div>
