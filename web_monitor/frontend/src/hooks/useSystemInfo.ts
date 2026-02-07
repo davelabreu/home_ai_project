@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-interface SystemInfo {
+export interface SystemInfo {
   cpu_percent: number;
   memory_percent: number;
   memory_total_gb: number;
