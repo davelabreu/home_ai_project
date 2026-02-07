@@ -23,6 +23,7 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 # If set, the app will attempt to fetch data from this remote host.
 # Otherwise, it will fetch data from the local machine.
 MONITOR_TARGET_HOST = os.environ.get('MONITOR_TARGET_HOST')
+MONITOR_TARGET_PORT = os.environ.get('MONITOR_TARGET_PORT', '5000') # New line
 
 # Configure Flask to serve React build by pointing to the 'dist' directory of the frontend.
 # This ensures that when the Flask app runs, it can deliver the compiled
@@ -126,7 +127,7 @@ def get_remote_network_status():
     
     try:
         # Construct the URL for the remote API endpoint
-        remote_url = f"http://{MONITOR_TARGET_HOST}:5000/api/local_network_status"
+        remote_url = f"http://{MONITOR_TARGET_HOST}:{MONITOR_TARGET_PORT}/api/local_network_status"
         app.logger.info(f"Fetching remote network status from: {remote_url}")
         response = requests.get(remote_url)
         response.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
@@ -192,7 +193,7 @@ def get_remote_system_info():
     
     try:
         # Construct the URL for the remote API endpoint
-        remote_url = f"http://{MONITOR_TARGET_HOST}:5000/api/local_system_info"
+        remote_url = f"http://{MONITOR_TARGET_HOST}:{MONITOR_TARGET_PORT}/api/local_system_info"
         app.logger.info(f"Fetching remote system info from: {remote_url}")
         response = requests.get(remote_url)
         response.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
@@ -223,7 +224,8 @@ def get_config():
     """
     return jsonify({
         'monitor_target_host_set': bool(MONITOR_TARGET_HOST),
-        'monitor_target_host': MONITOR_TARGET_HOST # Return the actual value
+        'monitor_target_host': MONITOR_TARGET_HOST, # Return the actual value
+        'monitor_target_port': MONITOR_TARGET_PORT # New line: Return the configured port
     })
 
 from flask import request # Import request for handling POST data
