@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jetson Dashboard</title>
+    <!-- Pico.css CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2.0.6/css/pico.min.css" />
+    <style>
+        body { margin: 20px; } /* Adjust margin if Pico default is too much */
+        h1 { margin-bottom: 1rem; }
+        .container { max-width: 960px; margin: auto; padding: 1rem; } /* Centered container */
+        .section-container {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background-color: var(--pico-background-color); /* Use Pico's background */
+            border: var(--pico-border-width) solid var(--pico-border-color);
+            border-radius: var(--pico-border-radius);
+        }
+        .section-container h2 {
+            margin-top: 0;
+            color: var(--pico-primary);
+            border-bottom: var(--pico-border-width) solid var(--pico-form-element-border-color);
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .device-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: var(--pico-border-width) dashed var(--pico-form-element-border-color);
+        }
+        .device-card:last-child {
+            border-bottom: none;
+        }
+        .device-ip { font-weight: bold; color: var(--pico-primary-inverse); }
+        .device-mac { font-family: monospace; font-size: 0.9em; }
+        .device-interface { font-style: italic; font-size: 0.8em; }
+        .error-message { color: var(--pico-del-color); font-weight: bold; }
+        .system-info-item { margin-bottom: 0.5rem; }
+        .progress-bar-container {
+            width: 100%;
+            background-color: var(--pico-form-element-background-color);
+            border-radius: var(--pico-border-radius);
+            overflow: hidden;
+            height: 20px;
+            margin-top: 0.5rem;
+        }
+        .progress-bar {
+            height: 100%;
+            background-color: var(--pico-primary);
+            text-align: center;
+            color: var(--pico-primary-inverse);
+            line-height: 20px;
+            border-radius: var(--pico-border-radius);
+            font-size: 0.8em;
+            transition: width 0.5s ease-in-out;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .progress-bar.red { background-color: var(--pico-del-color); }
+        .progress-bar.yellow { background-color: var(--pico-warn-color); }
+        .progress-bar.green { background-color: var(--pico-ins-color); }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <h1>Jetson Dashboard</h1>
+        <p>Monitor your Jetson and local network.</p>
+
+        <section id="system-info" class="section-container">
+            <h2>Jetson System Status</h2>
+            <div class="system-info-item">
+                <strong>CPU Usage:</strong> <span id="cpu-percent">Loading...</span>
+                <div class="progress-bar-container"><div id="cpu-bar" class="progress-bar"></div></div>
+            </div>
+            <div class="system-info-item">
+                <strong>Memory Usage:</strong> <span id="memory-percent">Loading...</span>
+                <div class="progress-bar-container"><div id="memory-bar" class="progress-bar"></div></div>
+            </div>
+        </section>
+
+        <section id="network-info" class="section-container">
+            <h2>Local Network Devices</h2>
+            Loading network status...
+        </section>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Function to fetch and display network status
+            function fetchNetworkStatus() {
+                fetch('/api/network_status')
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok ' + response.statusText);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        const networkInfoDiv = document.getElementById('network-info');
+                        networkInfoDiv.innerHTML = '<h2>Local Network Devices</h2>'; // Clear and re-add title
+
+                        if (data.error) {
+                            networkInfoDiv.innerHTML += `<p class="error-message">Error: ${data.error}</p>`;
+                            return;
+                        }
+
+                        if (data.length === 0) {
+                            networkInfoDiv.innerHTML += '<p>No devices found in ARP cache.</p>';
+                            return;
+                        }
+
+                        data.forEach(device => {
+                            const card = document.createElement('div');
+                            card.className = 'device-card';
+                            card.innerHTML = `
+                                <div>
+                                    <span class="device-ip">${device.ip}</span><br>
+                                    <span class="device-mac">${device.mac}</span>
+                                </div>
+                                <span class="device-interface">on ${device.interface}</span>
+                            `;
+                            networkInfoDiv.appendChild(card);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error fetching network status:', error);
+                        const networkInfoDiv = document.getElementById('network-info');
+                        networkInfoDiv.innerHTML = `<h2>Local Network Devices</h2><p class="error-message">Failed to load network status: ${error.message}</p>`;
+                    });
+            }
+
+            // Function to fetch and display system info
+            function fetchSystemInfo() {
+                fetch('/api/system_info')
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok ' + response.statusText);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.error) {
+                            document.getElementById('cpu-percent').innerText = `Error: ${data.error}`;
+                            document.getElementById('memory-percent').innerText = `Error: ${data.error}`;
+                            document.getElementById('cpu-bar').style.width = '0%';
+                            document.getElementById('memory-bar').style.width = '0%';
+                            return;
+                        }
+
+                        // CPU
+                        const cpuPercent = data.cpu_percent.toFixed(1);
+                        document.getElementById('cpu-percent').innerText = `${cpuPercent}%`;
+                        const cpuBar = document.getElementById('cpu-bar');
+                        cpuBar.style.width = `${cpuPercent}%`;
+                        cpuBar.innerText = `${cpuPercent}%`;
+                        cpuBar.className = 'progress-bar'; // Reset classes
+                        if (cpuPercent > 80) cpuBar.classList.add('red');
+                        else if (cpuPercent > 50) cpuBar.classList.add('yellow');
+                        else cpuBar.classList.add('green');
+
+
+                        // Memory
+                        const memPercent = data.memory_percent.toFixed(1);
+                        document.getElementById('memory-percent').innerText = `${memPercent}% (Used: ${data.memory_used_gb}GB / Total: ${data.memory_total_gb}GB)`;
+                        const memBar = document.getElementById('memory-bar');
+                        memBar.style.width = `${memPercent}%`;
+                        memBar.innerText = `${memPercent}%`;
+                        memBar.className = 'progress-bar'; // Reset classes
+                        if (memPercent > 80) memBar.classList.add('red');
+                        else if (memPercent > 50) memBar.classList.add('yellow');
+                        else memBar.classList.add('green');
+                    })
+                    .catch(error => {
+                        console.error('Error fetching system info:', error);
+                        document.getElementById('cpu-percent').innerText = `Failed: ${error.message}`;
+                        document.getElementById('memory-percent').innerText = `Failed: ${error.message}`;
+                        document.getElementById('cpu-bar').style.width = '0%';
+                        document.getElementById('memory-bar').style.width = '0%';
+                    });
+            }
+
+            // Initial fetch
+            fetchNetworkStatus();
+            fetchSystemInfo();
+
+            // Refresh system info every 5 seconds
+            setInterval(fetchSystemInfo, 5000); 
+            // Refresh network status every 30 seconds
+            setInterval(fetchNetworkStatus, 30000);
+        });
+    </script>
+</body>
+</html>
