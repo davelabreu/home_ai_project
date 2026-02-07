@@ -40,9 +40,9 @@ function App() {
       <header className="py-6 border-b border-gray-200 dark:border-gray-700">
         <div className="container mx-auto px-4 flex items-center justify-center space-x-4">
           {isJetsonApp ? (
-            <img src={NvidiaLogo} alt="Nvidia Logo" className="h-10 w-auto" />
+            <img src={NvidiaLogo} alt="Nvidia Logo" className="h-6 w-auto" />
           ) : (
-            <img src={DesktopIcon} alt="Desktop Icon" className="h-10 w-auto" />
+            <img src={DesktopIcon} alt="Desktop Icon" className="h-6 w-auto" />
           )}
           <div>
             <h1 className="text-3xl font-bold text-center">
