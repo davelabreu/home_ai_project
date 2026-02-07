@@ -7,6 +7,7 @@ import datetime # Import datetime for uptime calculation
 import sys # Import sys
 import requests # Import requests
 import time # Import time for sleep
+import json # Import json
 from dotenv import load_dotenv # Import load_dotenv
 from flask_cors import CORS # Import CORS
 
@@ -228,29 +229,152 @@ def get_config():
 from flask import request # Import request for handling POST data
 
 @app.route('/api/command/reboot', methods=['POST'])
+
 def command_reboot():
+
     """
+
     Executes a system reboot command on the machine running this Flask app.
+
     This endpoint requires POST requests.
+
     Uses subprocess.Popen to initiate the reboot in the background,
+
     allowing the Flask app to return a response immediately.
 
+
+
     SECURITY NOTE: This is a highly sensitive endpoint. In a production environment,
+
     it MUST be protected by robust authentication and authorization mechanisms
+
     to prevent unauthorized system reboots.
+
     """
+
     app.logger.info("Received request to reboot system.")
+
     try:
-        # Launch the shutdown command completely detached from the Flask process.
-        # This ensures the Flask app can send its response before the system goes offline.
-        # 'sudo shutdown -r now' is executed with output redirected to /dev/null and run in background.
-        subprocess.Popen(['sudo shutdown -r now &>/dev/null &'], shell=True, close_fds=True)
+
+        # Launch the shutdown command in a non-blocking way (Popen)
+
+        # stderr and stdout are redirected to /dev/null to prevent hanging
+
+        # and to keep the Flask app clean.
+
+        subprocess.Popen(['sudo', 'shutdown', '-r', 'now'],
+
+                         stdout=subprocess.DEVNULL,
+
+                         stderr=subprocess.DEVNULL)
+
         
-        # No need for time.sleep(1) as the command is fully detached.
+
         return jsonify({'status': 'success', 'message': 'System is rebooting.'}), 200
+
     except Exception as e:
+
         app.logger.error(f"An unexpected error occurred while initiating reboot: {e}")
+
         return jsonify({'status': 'error', 'message': f'An unexpected error occurred: {str(e)}'}), 500
+
+
+
+@app.route('/api/chat', methods=['POST'])
+
+def chat_with_ollama():
+
+    """
+
+    Handles chat requests, forwarding them to the local Ollama server
+
+    and returning its response.
+
+    """
+
+    data = request.json
+
+    prompt = data.get("prompt")
+
+    model_name = data.get("model", "qwen:1.8b") # Default model
+
+
+
+    if not prompt:
+
+        return jsonify({"error": "No prompt provided"}), 400
+
+
+
+    ollama_host = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+
+    url = f"{ollama_host}/api/generate"
+
+    headers = {"Content-Type": "application/json"}
+
+    ollama_data = {
+
+        "model": model_name,
+
+        "prompt": prompt,
+
+        "stream": False,
+
+    }
+
+
+
+    try:
+
+        app.logger.info(f"Sending prompt to Ollama: {prompt} (model: {model_name})")
+
+        response = requests.post(url, headers=headers, data=json.dumps(ollama_data))
+
+        response.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
+
+        
+
+        ollama_result = response.json()
+
+        if "response" in ollama_result:
+
+            return jsonify({"response": ollama_result["response"]}), 200
+
+        elif "error" in ollama_result:
+
+            app.logger.error(f"Error from Ollama: {ollama_result['error']}")
+
+            return jsonify({"error": f"Ollama Error: {ollama_result['error']}"}), 500
+
+        else:
+
+            app.logger.error(f"Unexpected Ollama response format: {ollama_result}")
+
+            return jsonify({"error": "Unexpected Ollama response format."}), 500
+
+
+
+    except requests.exceptions.ConnectionError:
+
+        app.logger.error("Connection Error: Is Ollama running? Check `ollama ps` and `ollama serve`.")
+
+        return jsonify({"error": "Connection Error: Ollama server not reachable. Is it running?"}), 500
+
+    except requests.exceptions.RequestException as e:
+
+        app.logger.error(f"Request to Ollama failed: {e}")
+
+        return jsonify({"error": f"Request to Ollama failed: {e}"}), 500
+
+    except Exception as e:
+
+        app.logger.error(f"An unexpected error occurred during Ollama chat: {e}")
+
+        return jsonify({"error": f"An unexpected error occurred: {str(e)}"}), 500
+
+
+
+
 
 if __name__ == '__main__':
     # When this script is executed directly, run the Flask development server.

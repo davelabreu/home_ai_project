@@ -5,6 +5,7 @@ import { useSystemInfo } from './hooks/useSystemInfo'; // Import the updated hoo
 import { useNetworkStatus } from './hooks/useNetworkStatus'; // Import the updated hook
 import { useConfig } from './hooks/useConfig'; // Import the new config hook
 import FaviconChanger from './components/FaviconChanger'; // Import the new FaviconChanger component
+import ChatCard from './components/ChatCard'; // Import the new ChatCard component
 import './index.css'; // Tailwind CSS directives
 
 // Import the SVG logos
@@ -139,6 +140,13 @@ function App() {
                 />
               )
             )}
+          </div>
+        )}
+
+        {/* Chat with Ollama */}
+        {monitor_target_host_set && (
+          <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
+            <ChatCard />
           </div>
         )}
 
