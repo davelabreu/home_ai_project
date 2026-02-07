@@ -112,7 +112,8 @@ function App() {
           )}
 
           {/* Chat with Ollama - NEW POSITION */}
-          {monitor_target_host_set && (
+          {/* Always render ChatCard if it's the Jetson App OR if configured for remote monitoring */}
+          {(isJetsonApp || monitor_target_host_set) && (
             <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
               <ChatCard />
             </div>
