@@ -35,7 +35,7 @@ app = Flask(
     template_folder=os.path.join(basedir, 'frontend', 'dist') # Serve index.html from React's build output
 )
 
-CORS(app, origins=["http://localhost:5000"]) # Enable CORS for all routes
+CORS(app, origins=["http://localhost:5000", "http://192.168.1.16:5000"]) # Enable CORS for all routes
 
 @app.route('/')
 def serve_index():
