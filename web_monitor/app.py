@@ -241,16 +241,12 @@ def command_reboot():
     """
     app.logger.info("Received request to reboot system.")
     try:
-        # Launch the shutdown command in a non-blocking way (Popen)
-        # stderr and stdout are redirected to /dev/null to prevent hanging
-        # and to keep the Flask app clean.
-        subprocess.Popen(['sudo', 'shutdown', '-r', 'now'],
-                         stdout=subprocess.DEVNULL,
-                         stderr=subprocess.DEVNULL)
+        # Launch the shutdown command completely detached from the Flask process.
+        # This ensures the Flask app can send its response before the system goes offline.
+        # 'sudo shutdown -r now' is executed with output redirected to /dev/null and run in background.
+        subprocess.Popen(['sudo shutdown -r now &>/dev/null &'], shell=True, close_fds=True)
         
-        # Give the server a moment to send the response before it potentially shuts down
-        time.sleep(1)
-        
+        # No need for time.sleep(1) as the command is fully detached.
         return jsonify({'status': 'success', 'message': 'System is rebooting.'}), 200
     except Exception as e:
         app.logger.error(f"An unexpected error occurred while initiating reboot: {e}")
