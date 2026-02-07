@@ -48,10 +48,10 @@ function App() {
 
   return (
     <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
-      <div className="min-h-screen bg-background text-foreground font-sans antialiased"> {/* Use theme classes */}
+      <div className="min-h-screen bg-background text-foreground font-sans antialiased">
         <FaviconChanger isJetsonApp={isJetsonApp} configLoading={configLoading} />
 
-        <header className="py-6 border-b border-border"> {/* Use theme classes */}
+        <header className="py-6 border-b border-border">
           <div className="container mx-auto px-4 flex items-center justify-center space-x-4">
             {isJetsonApp ? (
               <img src={NvidiaLogo} alt="Nvidia Logo" style={{ height: '3rem', width: 'auto' }} />
@@ -62,7 +62,7 @@ function App() {
               <h1 className="text-3xl font-bold text-center">
                 {isJetsonApp ? "Jetson Dashboard" : "PC Dashboard"}
               </h1>
-              <p className="text-center text-muted-foreground"> {/* Use theme classes */}
+              <p className="text-center text-muted-foreground">
                 {isJetsonApp ? "Monitor your Jetson." : "Monitor your local PC and a remote host."}
               </p>
             </div>
@@ -70,7 +70,7 @@ function App() {
         </header>
         <main className="container mx-auto px-4 py-8">
           {configLoading && <p className="text-center">Loading configuration...</p>}
-          {configError && <p className="text-center text-destructive">Error loading configuration: {configError}</p>} {/* Use theme classes */}
+          {configError && <p className="text-center text-destructive">Error loading configuration: {configError}</p>}
           
           {!configLoading && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -111,8 +111,15 @@ function App() {
             </div>
           )}
 
+          {/* Chat with Ollama - NEW POSITION */}
+          {monitor_target_host_set && (
+            <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
+              <ChatCard />
+            </div>
+          )}
+
           {!configLoading && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8"> {/* Added mt-8 for spacing */}
               {/* Local Network Status */}
               <NetworkStatusCard 
                 title={isJetsonApp ? "Jetson Network Devices" : "Local PC Network Devices"} 
@@ -142,15 +149,8 @@ function App() {
             </div>
           )}
 
-          {/* Chat with Ollama */}
-          {monitor_target_host_set && (
-            <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
-              <ChatCard />
-            </div>
-          )}
-
           {/* Placeholder for future features */}
-          <section className="mt-8 p-4 border rounded-lg shadow-sm bg-card text-card-foreground"> {/* Use theme classes */}
+          <section className="mt-8 p-4 border rounded-lg shadow-sm bg-card text-card-foreground">
             <h2 className="text-xl font-semibold mb-4">Other Features (Coming Soon!)</h2>
             <p className="text-muted-foreground">
               Deployment tools, 
