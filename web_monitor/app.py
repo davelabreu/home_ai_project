@@ -5,10 +5,16 @@ import psutil # Import psutil
 import os # Import os for path manipulation
 import datetime # Import datetime for uptime calculation
 import sys # Import sys
+import requests # Import requests
 
 # Determine the base directory of the Flask app
 # This assumes app.py is directly in home_ai_project/web_monitor/
 basedir = os.path.abspath(os.path.dirname(__file__))
+
+# Read the MONITOR_TARGET_HOST environment variable.
+# If set, the app will attempt to fetch data from this remote host.
+# Otherwise, it will fetch data from the local machine.
+MONITOR_TARGET_HOST = os.environ.get('MONITOR_TARGET_HOST')
 
 # Configure Flask to serve React build by pointing to the 'dist' directory of the frontend.
 # This ensures that when the Flask app runs, it can deliver the compiled
@@ -27,10 +33,21 @@ def serve_index():
 @app.route('/api/network_status')
 def get_network_status():
     """
-    Retrieves and returns network status information, specifically a list of
-    connected devices (IP, MAC, Interface) by parsing the 'arp -a' command output.
-    It also attempts to include the Jetson's own IP and MAC address, or handles Windows.
+    Retrieves and returns network status information, either from the local machine
+    or a remote host specified by MONITOR_TARGET_HOST.
     """
+    if MONITOR_TARGET_HOST:
+        try:
+            # Construct the URL for the remote API endpoint
+            remote_url = f"http://{MONITOR_TARGET_HOST}:5000/api/network_status"
+            app.logger.info(f"Fetching network status from remote host: {remote_url}")
+            response = requests.get(remote_url)
+            response.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
+            return jsonify(response.json())
+        except requests.exceptions.RequestException as e:
+            app.logger.error(f"Error fetching network status from remote host {MONITOR_TARGET_HOST}: {e}")
+            return jsonify({'error': f"Could not connect to remote host {MONITOR_TARGET_HOST} for network status: {e}"}), 500
+    
     devices = []
     try:
         if sys.platform.startswith('win'):
@@ -92,10 +109,21 @@ def get_network_status():
 @app.route('/api/system_info')
 def get_system_info():
     """
-    Retrieves and returns various system performance metrics such as CPU usage,
-    memory usage, disk usage, and system uptime.
-    Utilizes the psutil library for cross-platform system information retrieval.
+    Retrieves and returns various system performance metrics, either from the local machine
+    or a remote host specified by MONITOR_TARGET_HOST.
     """
+    if MONITOR_TARGET_HOST:
+        try:
+            # Construct the URL for the remote API endpoint
+            remote_url = f"http://{MONITOR_TARGET_HOST}:5000/api/system_info"
+            app.logger.info(f"Fetching system info from remote host: {remote_url}")
+            response = requests.get(remote_url)
+            response.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
+            return jsonify(response.json())
+        except requests.exceptions.RequestException as e:
+            app.logger.error(f"Error fetching system info from remote host {MONITOR_TARGET_HOST}: {e}")
+            return jsonify({'error': f"Could not connect to remote host {MONITOR_TARGET_HOST} for system info: {e}"}), 500
+
     try:
         # psutil.cpu_percent returns a system-wide CPU utilization as a percentage.
         # interval=1 makes it a blocking call for 1 second to get a meaningful sample.

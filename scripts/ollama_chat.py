@@ -2,20 +2,25 @@ import requests
 import json
 import sys
 import os
+import argparse # Import argparse
 
 # Check if OLLAMA_HOST is set, otherwise default to localhost
 ollama_host = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 
-if len(sys.argv) < 2:
-    print("Usage: python ollama_chat.py \"Your prompt here\"") # Corrected line
-    sys.exit(1)
+# Setup argument parser
+parser = argparse.ArgumentParser(description="Chat with Ollama model.")
+parser.add_argument("prompt", help="Your prompt here")
+parser.add_argument("-m", "--model", default="qwen:1.8b",
+                    help="The Ollama model to use (e.g., 'llama2', 'mistral'). Default is 'qwen:1.8b'.")
+args = parser.parse_args()
 
-prompt = sys.argv[1]
+prompt = args.prompt
+model_name = args.model
 
 url = f"{ollama_host}/api/generate"
 headers = {"Content-Type": "application/json"}
 data = {
-    "model": "qwen:1.8b",  # Ensure this matches your model tag
+    "model": model_name,
     "prompt": prompt,
     "stream": False,
 }

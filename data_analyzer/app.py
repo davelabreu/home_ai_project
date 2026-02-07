@@ -39,6 +39,7 @@ app.layout = html.Div([
 ])
 
 # Callback function to handle the uploaded file
+# This callback processes the uploaded file contents and updates the UI.
 @app.callback(Output('output-data-upload', 'children'),
               Input('upload-data', 'contents'),
               State('upload-data', 'filename'),

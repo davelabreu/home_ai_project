@@ -20,7 +20,12 @@ function App() {
         {/* Placeholder for future features */}
         <section className="mt-8 p-4 border rounded-lg shadow-sm bg-white dark:bg-gray-800">
           <h2 className="text-xl font-semibold mb-4">Other Features (Coming Soon!)</h2>
-          <p className="text-gray-600 dark:text-gray-400">Deployment tools, Qwen chat interface...</p>
+          <p className="text-gray-600 dark:text-gray-400">
+            {/* Deployment tools link to /api/deploy in Flask backend */}
+            Deployment tools, 
+            {/* Qwen chat interface links to scripts/ollama_chat.py */}
+            Qwen chat interface...
+          </p>
         </section>
       </main>
     </div>

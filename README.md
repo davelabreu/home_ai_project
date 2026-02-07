@@ -7,6 +7,7 @@ This `README.md` provides a high-level overview of the entire `home_ai_project`.
 *   `README.md`: This file, providing a high-level overview of the project, vision, hardware, network, roadmap, and security considerations.
 *   `scripts/`: Contains various utility scripts for system management, automation, and AI model interactions.
 *   `web_monitor/`: The main web application for monitoring and managing the Jetson device and other home AI components. It consists of a Flask backend and a React frontend.
+*   `data_analyzer/`: A Dash Plotly application for ingesting, analyzing, and visualizing data, designed to run as a separate microservice.
 
 ## Vision
 To create a robust home automation and AI companion system, leveraging a Jetson device for always-on lightweight tasks and a powerful main PC for intensive computational needs (e.g., advanced AI models). The system aims to centralize control, enhance remote accessibility, and manage home network resources efficiently.
