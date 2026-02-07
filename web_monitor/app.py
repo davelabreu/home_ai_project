@@ -220,6 +220,32 @@ def get_config():
         'monitor_target_host_set': bool(MONITOR_TARGET_HOST)
     })
 
+from flask import request # Import request for handling POST data
+
+@app.route('/api/command/reboot', methods=['POST'])
+def command_reboot():
+    """
+    Executes a system reboot command on the machine running this Flask app.
+    This endpoint requires POST requests.
+
+    SECURITY NOTE: This is a highly sensitive endpoint. In a production environment,
+    it MUST be protected by robust authentication and authorization mechanisms
+    to prevent unauthorized system reboots.
+    """
+    app.logger.info("Received request to reboot system.")
+    try:
+        # Using 'sudo shutdown -r now' for broader Linux compatibility over just 'reboot'
+        # This command typically requires sudo privileges, which means the user
+        # running the Flask app needs to have passwordless sudo for 'shutdown'.
+        subprocess.run(['sudo', 'shutdown', '-r', 'now'], check=True)
+        return jsonify({'status': 'success', 'message': 'System is rebooting.'}), 200
+    except subprocess.CalledProcessError as e:
+        app.logger.error(f"Failed to execute reboot command: {e}")
+        return jsonify({'status': 'error', 'message': f'Failed to reboot: {e.stderr}'}), 500
+    except Exception as e:
+        app.logger.error(f"An unexpected error occurred during reboot: {e}")
+        return jsonify({'status': 'error', 'message': f'An unexpected error occurred: {str(e)}'}), 500
+
 if __name__ == '__main__':
     # When this script is executed directly, run the Flask development server.
     # host='0.0.0.0' makes the server externally accessible from any IP address.

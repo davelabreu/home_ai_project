@@ -1,4 +1,4 @@
-import React from 'react'; // Removed useEffect here
+import React, { useState } from 'react'; // Added useState
 import NetworkStatusCard from './components/NetworkStatusCard';
 import SystemInfoCard from './components/SystemInfoCard';
 import { useSystemInfo } from './hooks/useSystemInfo'; // Import the updated hook
@@ -15,9 +15,30 @@ function App() {
   const { local: localSystem, remote: remoteSystem } = useSystemInfo();
   const { local: localNetwork, remote: remoteNetwork } = useNetworkStatus();
   const { monitor_target_host_set, loading: configLoading, error: configError } = useConfig();
+  const [rebootMessage, setRebootMessage] = useState<string | null>(null);
 
   // Determine header content based on configuration
   const isJetsonApp = !monitor_target_host_set; // If MONITOR_TARGET_HOST is not set, this is the Jetson's local app
+
+  const handleReboot = async () => {
+    if (!window.confirm("Are you sure you want to reboot the remote host? This action cannot be undone.")) {
+      return;
+    }
+
+    setRebootMessage("Attempting to reboot remote host...");
+    try {
+      const response = await fetch('/api/command/reboot', { method: 'POST' });
+      const data = await response.json();
+
+      if (response.ok) {
+        setRebootMessage(`Reboot initiated: ${data.message}`);
+      } else {
+        setRebootMessage(`Reboot failed: ${data.message || response.statusText}`);
+      }
+    } catch (error: any) {
+      setRebootMessage(`Reboot request failed: ${error.message}`);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4">
@@ -56,12 +77,20 @@ function App() {
 
             {/* Remote System Info (conditionally rendered) */}
             {monitor_target_host_set ? (
-              <SystemInfoCard 
-                title="Remote Host System Status" 
-                systemInfo={remoteSystem.info} 
-                error={remoteSystem.error} 
-                loading={remoteSystem.loading} 
-              />
+              <>
+                <SystemInfoCard 
+                  title="Remote Host System Status" 
+                  systemInfo={remoteSystem.info} 
+                  error={remoteSystem.error} 
+                  loading={remoteSystem.loading} 
+                  onRebootClick={handleReboot} // Pass the reboot handler
+                />
+                {rebootMessage && (
+                  <p className={`text-center text-sm ${rebootMessage.includes("failed") ? "text-red-500" : "text-green-500"} mt-2`}>
+                    {rebootMessage}
+                  </p>
+                )}
+              </>
             ) : (
               // Only display 'Not Configured' message if we're on the PC app AND remote is not configured
               !remoteSystem.loading && remoteSystem.error && (

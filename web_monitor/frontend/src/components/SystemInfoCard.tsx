@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Assuming shadcn cards
 import { Progress } from '@/components/ui/progress'; // Shadcn Progress component
+import { Button } from '@/components/ui/button'; // Import Button component
 import { SystemInfo } from '../hooks/useSystemInfo'; // Import the SystemInfo interface
 
 interface SystemInfoCardProps {
@@ -8,9 +9,10 @@ interface SystemInfoCardProps {
   systemInfo: SystemInfo | null;
   error: string | null;
   loading: boolean;
+  onRebootClick?: () => void; // Optional reboot action prop
 }
 
-const SystemInfoCard: React.FC<SystemInfoCardProps> = ({ title, systemInfo, error, loading }) => {
+const SystemInfoCard: React.FC<SystemInfoCardProps> = ({ title, systemInfo, error, loading, onRebootClick }) => {
   const getProgressColorClass = (value: number) => {
     if (value > 80) return 'bg-red-500';
     if (value > 50) return 'bg-yellow-500';
@@ -55,6 +57,13 @@ const SystemInfoCard: React.FC<SystemInfoCardProps> = ({ title, systemInfo, erro
               <span>Uptime:</span>
               <span className="font-medium">{systemInfo.uptime}</span>
             </div>
+            {onRebootClick && (
+              <div className="pt-4">
+                <Button onClick={onRebootClick} disabled={loading || error !== null} className="w-full">
+                  Reboot {title.includes("Remote Host") ? "Remote Host" : "System"}
+                </Button>
+              </div>
+            )}
           </>
         )}
       </CardContent>
