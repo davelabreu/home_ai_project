@@ -7,7 +7,7 @@ COPY frontend/. .
 RUN npm run build
 
 # Stage 2: Backend (Python) Build
-FROM python:3.10-slim-buster
+FROM python:3.10-slim-bookworm
 WORKDIR /app
 
 # Copy backend requirements and install
