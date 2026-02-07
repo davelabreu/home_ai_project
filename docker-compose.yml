@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  dashboard:
+    build: 
+      context: ./web_monitor
+    container_name: home_ai_dashboard
+    restart: always
+    ports:
+      - "8050:5000" # Maps Jetson 8050 -> Container 5000
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+  
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama_jetson
+    restart: always
+    runtime: nvidia
+    ports:
+      - "11434:11434"
+    volumes:
+      - ~/.ollama:/root/.ollama
