@@ -8,6 +8,7 @@ import sys # Import sys
 import requests # Import requests
 import time # Import time for sleep
 from dotenv import load_dotenv # Import load_dotenv
+from flask_cors import CORS # Import CORS
 
 # Load environment variables from .env file
 # This should be called as early as possible.
@@ -31,6 +32,8 @@ app = Flask(
     static_url_path='/assets', # Map these assets to the /assets URL path
     template_folder=os.path.join(basedir, 'frontend', 'dist') # Serve index.html from React's build output
 )
+
+CORS(app) # Enable CORS for all routes
 
 @app.route('/')
 def serve_index():

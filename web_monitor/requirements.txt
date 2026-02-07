@@ -2,3 +2,4 @@ Flask
 psutil
 requests
 python-dotenv
+Flask-Cors
