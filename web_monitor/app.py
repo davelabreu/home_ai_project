@@ -6,6 +6,7 @@ import os # Import os for path manipulation
 import datetime # Import datetime for uptime calculation
 import sys # Import sys
 import requests # Import requests
+import time # Import time for sleep
 from dotenv import load_dotenv # Import load_dotenv
 
 # Load environment variables from .env file
@@ -228,6 +229,8 @@ def command_reboot():
     """
     Executes a system reboot command on the machine running this Flask app.
     This endpoint requires POST requests.
+    Uses subprocess.Popen to initiate the reboot in the background,
+    allowing the Flask app to return a response immediately.
 
     SECURITY NOTE: This is a highly sensitive endpoint. In a production environment,
     it MUST be protected by robust authentication and authorization mechanisms
@@ -235,16 +238,19 @@ def command_reboot():
     """
     app.logger.info("Received request to reboot system.")
     try:
-        # Using 'sudo shutdown -r now' for broader Linux compatibility over just 'reboot'
-        # This command typically requires sudo privileges, which means the user
-        # running the Flask app needs to have passwordless sudo for 'shutdown'.
-        subprocess.run(['sudo', 'shutdown', '-r', 'now'], check=True)
+        # Launch the shutdown command in a non-blocking way (Popen)
+        # stderr and stdout are redirected to /dev/null to prevent hanging
+        # and to keep the Flask app clean.
+        subprocess.Popen(['sudo', 'shutdown', '-r', 'now'],
+                         stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL)
+        
+        # Give the server a moment to send the response before it potentially shuts down
+        time.sleep(1)
+        
         return jsonify({'status': 'success', 'message': 'System is rebooting.'}), 200
-    except subprocess.CalledProcessError as e:
-        app.logger.error(f"Failed to execute reboot command: {e}")
-        return jsonify({'status': 'error', 'message': f'Failed to reboot: {e.stderr}'}), 500
     except Exception as e:
-        app.logger.error(f"An unexpected error occurred during reboot: {e}")
+        app.logger.error(f"An unexpected error occurred while initiating reboot: {e}")
         return jsonify({'status': 'error', 'message': f'An unexpected error occurred: {str(e)}'}), 500
 
 if __name__ == '__main__':
