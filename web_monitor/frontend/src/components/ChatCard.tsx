@@ -14,7 +14,7 @@ const ChatCard: React.FC = () => {
   const [inputMessage, setInputMessage] = useState<string>('');
   const [isSending, setIsSending] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { monitor_target_host_set, monitorTargetHost, loading: configLoading } = useConfig();
+  const { monitor_target_host_set, monitorTargetHost, loading: configLoading, error: configError } = useConfig();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -26,10 +26,6 @@ const ChatCard: React.FC = () => {
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
-    if (!monitorTargetHost) { // Should not happen if card is conditionally rendered, but as a safeguard
-      setMessages((prev) => [...prev, { text: "Error: Remote host not configured for chat.", sender: "ollama" }]);
-      return;
-    }
 
     const newUserMessage: Message = { text: inputMessage, sender: 'user' };
     setMessages((prevMessages) => [...prevMessages, newUserMessage]);
@@ -37,7 +33,11 @@ const ChatCard: React.FC = () => {
     setIsSending(true);
 
     try {
-      const chatApiUrl = `http://${monitorTargetHost}:5000/api/chat`; // Absolute URL
+      // Determine the API URL based on whether a remote host is configured
+      const chatApiUrl = monitorTargetHost
+                         ? `http://${monitorTargetHost}:5000/api/chat`
+                         : `http://localhost:5000/api/chat`; // Default to local if no remote host is set
+
       const response = await fetch(chatApiUrl, {
         method: 'POST',
         headers: {
@@ -61,7 +61,9 @@ const ChatCard: React.FC = () => {
     }
   };
 
-  const isChatDisabled = !monitor_target_host_set || configLoading;
+  // Chat is disabled if config is still loading or if there's a config error for the remote host.
+  // It is NOT disabled if monitorTargetHost is null (i.e., when on the Jetson's local dashboard).
+  const isChatDisabled = configLoading || (monitor_target_host_set && configError !== null);
 
   return (
     <Card className="col-span-1 md:col-span-2 lg:col-span-1 h-[500px] flex flex-col">
@@ -88,10 +90,15 @@ const ChatCard: React.FC = () => {
           ))}
           <div ref={messagesEndRef} />
         </div>
-        {isChatDisabled && (
+        {configError && !monitor_target_host_set && ( // Display error if config fails and it's not remote monitoring
           <p className="text-center text-red-500 mt-2">
-            Chat is only available when monitoring a remote host.
+            Error loading chat configuration: {configError}
           </p>
+        )}
+        {(configLoading || (!monitor_target_host_set && configError)) && (
+             <p className="text-center text-muted-foreground mt-2">
+                {configLoading ? "Loading chat configuration..." : "Chat unavailable due to configuration error."}
+             </p>
         )}
         <div className="flex mt-auto space-x-2 p-2 border-t dark:border-gray-700">
           <Input
