@@ -4,6 +4,7 @@ import re
 import psutil # Import psutil
 import os # Import os for path manipulation
 import datetime # Import datetime for uptime calculation
+import sys # Import sys
 
 # Determine the base directory of the Flask app
 # This assumes app.py is directly in home_ai_project/web_monitor/
@@ -20,49 +21,64 @@ app = Flask(
 )
 
 @app.route('/')
-def serve_react_app():
-    # This route serves the main entry point (index.html) of the React application.
-    # Flask is configured to look for this file in the 'template_folder'
-    # which points to the 'frontend/dist' directory.
-    return send_from_directory(app.template_folder, 'index.html')
+def serve_index():
+    return render_template('index.html')
 
 @app.route('/api/network_status')
 def get_network_status():
     """
     Retrieves and returns network status information, specifically a list of
     connected devices (IP, MAC, Interface) by parsing the 'arp -a' command output.
-    It also attempts to include the Jetson's own IP and MAC address.
+    It also attempts to include the Jetson's own IP and MAC address, or handles Windows.
     """
+    devices = []
     try:
-        # Execute 'arp -a' to get connected devices from the ARP cache.
-        # This command is common on Linux systems.
-        result = subprocess.run(['arp', '-a'], capture_output=True, text=True, check=True)
-        output_lines = result.stdout.splitlines()
+        if sys.platform.startswith('win'):
+            # Windows specific 'arp -a' command and parsing
+            # On Windows, 'arp -a' output format is different.
+            # Example:
+            #   Interface: 192.168.1.10 --- 0x1
+            #     Internet Address      Physical Address      Type
+            #     192.168.1.1           00-11-22-33-44-55     dynamic
+            #     192.168.1.100         AA-BB-CC-DD-EE-FF     static
+            
+            result = subprocess.run(['arp', '-a'], capture_output=True, text=True, check=True)
+            output_lines = result.stdout.splitlines()
 
-        devices = []
-        # Regex to parse 'arp -a' output: '? (IP_ADDRESS) at MAC_ADDRESS [ether] on INTERFACE'
-        # Example: ? (192.168.1.1) at 00:11:22:33:44:55 [ether] on eth0
-        arp_pattern = re.compile(r'\? \((\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\) at ([0-9a-fA-F:]+) \[ether\] on (\w+)')
+            # Regex for Windows arp -a output: IP Address, MAC Address, Type
+            # IP: (\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})
+            # MAC: ([0-9a-fA-F]{2}-[0-9a-fA-F]{2}-[0-9a-fA-F]{2}-[0-9a-fA-F]{2}-[0-9a-fA-F]{2}-[0-9a-fA-F]{2})
+            # Type: (dynamic|static)
+            # Need to handle potential leading/trailing spaces and the structure.
+            arp_pattern_win = re.compile(r'\s*(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s*([0-9a-fA-F]{2}-[0-9a-fA-F]{2}-[0-9a-fA-F]{2}-[0-9a-fA-F]{2}-[0-9a-fA-F]{2}-[0-9a-fA-F]{2})\s*(dynamic|static)')
 
-        for line in output_lines:
-            match = arp_pattern.search(line)
-            if match:
-                ip, mac, interface = match.groups()
-                devices.append({'ip': ip, 'mac': mac, 'interface': interface})
-        
-        # Attempt to add the Jetson device's own IP and MAC address to the list.
-        # This assumes the Flask app is running directly on the Jetson.
-        try:
-            jetson_ip_result = subprocess.run(['hostname', '-I'], capture_output=True, text=True, check=True)
-            jetson_ip = jetson_ip_result.stdout.split()[0]
-            # Assumes 'eth0' as the primary network interface. This might need adjustment
-            # for other interfaces (e.g., wlan0 for Wi-Fi) or dynamic detection.
-            jetson_mac_result = subprocess.run(['cat', '/sys/class/net/eth0/address'], capture_output=True, text=True, check=True)
-            jetson_mac = jetson_mac_result.stdout.strip()
-            devices.append({'ip': jetson_ip, 'mac': jetson_mac, 'interface': 'self (Jetson)'})
-        except Exception as e:
-            # Log a warning if the Jetson's own IP/MAC cannot be determined
-            app.logger.warning(f"Could not determine Jetson's own IP/MAC: {e}")
+            for line in output_lines:
+                match = arp_pattern_win.search(line)
+                if match:
+                    ip, mac, _type = match.groups()
+                    devices.append({'ip': ip, 'mac': mac.replace('-', ':'), 'interface': 'unknown (Windows)'}) # Interface retrieval is complex on Windows with `arp -a`; defaulting to 'unknown'.
+        else: # Linux/Jetson specific logic
+            result = subprocess.run(['arp', '-a'], capture_output=True, text=True, check=True)
+            output_lines = result.stdout.splitlines()
+
+            # Regex to parse 'arp -a' output on Linux: '? (IP_ADDRESS) at MAC_ADDRESS [ether] on INTERFACE'
+            arp_pattern_linux = re.compile(r'\? \((\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\) at ([0-9a-fA-F:]+) \[ether\] on (\w+)')
+
+            for line in output_lines:
+                match = arp_pattern_linux.search(line)
+                if match:
+                    ip, mac, interface = match.groups()
+                    devices.append({'ip': ip, 'mac': mac, 'interface': interface})
+            
+            # Attempt to add the Jetson device's own IP and MAC address to the list.
+            try:
+                jetson_ip_result = subprocess.run(['hostname', '-I'], capture_output=True, text=True, check=True)
+                jetson_ip = jetson_ip_result.stdout.split()[0]
+                jetson_mac_result = subprocess.run(['cat', '/sys/class/net/eth0/address'], capture_output=True, text=True, check=True)
+                jetson_mac = jetson_mac_result.stdout.strip()
+                devices.append({'ip': jetson_ip, 'mac': jetson_mac, 'interface': 'self (Jetson)'})
+            except Exception as e:
+                app.logger.warning(f"Could not determine Jetson's own IP/MAC: {e}")
 
 
         return jsonify(devices)
