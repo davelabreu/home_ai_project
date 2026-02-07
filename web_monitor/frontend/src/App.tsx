@@ -16,7 +16,7 @@ import NvidiaLogo from '/nvidia_logo.svg';
 function App() {
   const { local: localSystem, remote: remoteSystem } = useSystemInfo();
   const { local: localNetwork, remote: remoteNetwork } = useNetworkStatus();
-  const { monitor_target_host_set, monitorTargetHost, loading: configLoading, error: configError } = useConfig();
+  const { monitor_target_host_set, monitorTargetHost, monitorTargetPort, loading: configLoading, error: configError } = useConfig();
   const [rebootMessage, setRebootMessage] = useState<string | null>(null);
 
   const isJetsonApp = !monitor_target_host_set;
@@ -26,14 +26,14 @@ function App() {
       return;
     }
 
-    if (!monitorTargetHost) {
-      setRebootMessage("Reboot failed: Remote host IP is not configured.");
+    if (!monitorTargetHost || !monitorTargetPort) { // Check for monitorTargetPort as well
+      setRebootMessage("Reboot failed: Remote host IP or port is not configured.");
       return;
     }
 
-    setRebootMessage(`Attempting to reboot remote host (${monitorTargetHost})...`);
+    setRebootMessage(`Attempting to reboot remote host (${monitorTargetHost}:${monitorTargetPort})...`);
     try {
-      const response = await fetch(`http://${monitorTargetHost}:5000/api/command/reboot`, { method: 'POST' });
+      const response = await fetch(`http://${monitorTargetHost}:${monitorTargetPort}/api/command/reboot`, { method: 'POST' });
       const data = await response.json();
 
       if (response.ok) {

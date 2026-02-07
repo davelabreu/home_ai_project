@@ -14,7 +14,7 @@ const ChatCard: React.FC = () => {
   const [inputMessage, setInputMessage] = useState<string>('');
   const [isSending, setIsSending] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { monitor_target_host_set, monitorTargetHost, loading: configLoading, error: configError } = useConfig();
+  const { monitor_target_host_set, monitorTargetHost, monitorTargetPort, loading: configLoading, error: configError } = useConfig();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -34,9 +34,10 @@ const ChatCard: React.FC = () => {
 
     try {
       // Determine the API URL based on whether a remote host is configured
-      const chatApiUrl = monitorTargetHost
-                         ? `http://${monitorTargetHost}:5000/api/chat` // Use port 5000
-                         : `http://localhost:5000/api/chat`; // Default to local if no remote host is set, use port 5000
+      const targetHost = monitorTargetHost || 'localhost';
+      // If monitoring a remote host, use its configured port. Otherwise, assume local Flask app is on 5000.
+      const targetPort = monitor_target_host_set && monitorTargetPort ? monitorTargetPort : '5000';
+      const chatApiUrl = `http://${targetHost}:${targetPort}/api/chat`;
 
       const response = await fetch(chatApiUrl, {
         method: 'POST',
