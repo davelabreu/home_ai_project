@@ -9,28 +9,38 @@ import datetime # Import datetime for uptime calculation
 # This assumes app.py is directly in home_ai_project/web_monitor/
 basedir = os.path.abspath(os.path.dirname(__file__))
 
-# Configure Flask to serve React build
+# Configure Flask to serve React build by pointing to the 'dist' directory of the frontend.
+# This ensures that when the Flask app runs, it can deliver the compiled
+# React application (HTML, CSS, JavaScript) to the client's browser.
 app = Flask(
     __name__,
-    static_folder=os.path.join(basedir, 'frontend', 'dist', 'assets'),
-    static_url_path='/assets', # React's build often puts assets in /assets
-    template_folder=os.path.join(basedir, 'frontend', 'dist')
+    static_folder=os.path.join(basedir, 'frontend', 'dist', 'assets'), # Serve static assets (JS, CSS, images) from React's build output
+    static_url_path='/assets', # Map these assets to the /assets URL path
+    template_folder=os.path.join(basedir, 'frontend', 'dist') # Serve index.html from React's build output
 )
 
 @app.route('/')
 def serve_react_app():
+    # This route serves the main entry point (index.html) of the React application.
+    # Flask is configured to look for this file in the 'template_folder'
+    # which points to the 'frontend/dist' directory.
     return send_from_directory(app.template_folder, 'index.html')
 
 @app.route('/api/network_status')
 def get_network_status():
+    """
+    Retrieves and returns network status information, specifically a list of
+    connected devices (IP, MAC, Interface) by parsing the 'arp -a' command output.
+    It also attempts to include the Jetson's own IP and MAC address.
+    """
     try:
-        # Execute 'arp -a' to get connected devices
-        # This command is common on Linux systems to show the ARP cache
+        # Execute 'arp -a' to get connected devices from the ARP cache.
+        # This command is common on Linux systems.
         result = subprocess.run(['arp', '-a'], capture_output=True, text=True, check=True)
         output_lines = result.stdout.splitlines()
 
         devices = []
-        # Regex to parse 'arp -a' output: '? (IP_ADDRESS) at MAC_ADDRESS) at MAC_ADDRESS [ether] on INTERFACE'
+        # Regex to parse 'arp -a' output: '? (IP_ADDRESS) at MAC_ADDRESS [ether] on INTERFACE'
         # Example: ? (192.168.1.1) at 00:11:22:33:44:55 [ether] on eth0
         arp_pattern = re.compile(r'\? \((\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\) at ([0-9a-fA-F:]+) \[ether\] on (\w+)')
 
@@ -40,15 +50,18 @@ def get_network_status():
                 ip, mac, interface = match.groups()
                 devices.append({'ip': ip, 'mac': mac, 'interface': interface})
         
-        # Add Jetson's own IP/MAC (this assumes the Jetson is the one running the Flask app)
-        # You might need a more robust way to get the Jetson's own IP/MAC
+        # Attempt to add the Jetson device's own IP and MAC address to the list.
+        # This assumes the Flask app is running directly on the Jetson.
         try:
             jetson_ip_result = subprocess.run(['hostname', '-I'], capture_output=True, text=True, check=True)
             jetson_ip = jetson_ip_result.stdout.split()[0]
-            jetson_mac_result = subprocess.run(['cat', '/sys/class/net/eth0/address'], capture_output=True, text=True, check=True) # Assumes eth0
+            # Assumes 'eth0' as the primary network interface. This might need adjustment
+            # for other interfaces (e.g., wlan0 for Wi-Fi) or dynamic detection.
+            jetson_mac_result = subprocess.run(['cat', '/sys/class/net/eth0/address'], capture_output=True, text=True, check=True)
             jetson_mac = jetson_mac_result.stdout.strip()
             devices.append({'ip': jetson_ip, 'mac': jetson_mac, 'interface': 'self (Jetson)'})
         except Exception as e:
+            # Log a warning if the Jetson's own IP/MAC cannot be determined
             app.logger.warning(f"Could not determine Jetson's own IP/MAC: {e}")
 
 
@@ -62,11 +75,19 @@ def get_network_status():
 
 @app.route('/api/system_info')
 def get_system_info():
+    """
+    Retrieves and returns various system performance metrics such as CPU usage,
+    memory usage, disk usage, and system uptime.
+    Utilizes the psutil library for cross-platform system information retrieval.
+    """
     try:
-        cpu_percent = psutil.cpu_percent(interval=1) # interval for a non-blocking call
-        virtual_memory = psutil.virtual_memory()
-        disk_usage = psutil.disk_usage('/') # Get disk usage for the root partition
-        boot_time_timestamp = psutil.boot_time()
+        # psutil.cpu_percent returns a system-wide CPU utilization as a percentage.
+        # interval=1 makes it a blocking call for 1 second to get a meaningful sample.
+        cpu_percent = psutil.cpu_percent(interval=1) 
+        virtual_memory = psutil.virtual_memory() # Get system memory usage statistics
+        disk_usage = psutil.disk_usage('/') # Get disk usage for the root partition ('/')
+        boot_time_timestamp = psutil.boot_time() # Get the system boot time as a Unix timestamp
+        # Calculate uptime by subtracting boot time from current time
         uptime_seconds = (datetime.datetime.now() - datetime.datetime.fromtimestamp(boot_time_timestamp)).total_seconds()
         
         mem_percent = virtual_memory.percent
@@ -77,7 +98,7 @@ def get_system_info():
         disk_total_gb = round(disk_usage.total / (1024**3), 2)
         disk_used_gb = round(disk_usage.used / (1024**3), 2)
 
-        # Format uptime for better readability
+        # Format uptime from seconds into a more human-readable string (days, hours, minutes)
         days, remainder = divmod(int(uptime_seconds), 86400)
         hours, remainder = divmod(remainder, 3600)
         minutes, seconds = divmod(remainder, 60)
@@ -99,11 +120,23 @@ def get_system_info():
 
 @app.route('/api/deploy/<action_name>')
 def deploy_action(action_name):
-    # This is a placeholder. In a real scenario, you'd add logic here
-    # to perform deployment tasks based on action_name.
+    """
+    Placeholder endpoint for handling deployment actions.
+    In a production scenario, this endpoint would trigger specific deployment
+    scripts or commands based on the 'action_name'.
+    
+    Security Note: Any real deployment action should involve robust authentication,
+    authorization, and validation to prevent unauthorized or malicious operations.
+    Direct execution of arbitrary commands based on user input is highly discouraged.
+    """
     app.logger.info(f"Received request to deploy action: {action_name}")
     return jsonify({'status': 'success', 'message': f'Deployment action "{action_name}" received and will be processed.'})
 
 
 if __name__ == '__main__':
+    # When this script is executed directly, run the Flask development server.
+    # host='0.0.0.0' makes the server externally accessible from any IP address.
+    # port=5000 sets the port on which the server listens for incoming requests.
+    # debug=True enables debug mode, providing detailed error messages and auto-reloading
+    # upon code changes. This should be set to False in production environments.
     app.run(host='0.0.0.0', port=5000, debug=True)
