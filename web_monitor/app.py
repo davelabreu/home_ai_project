@@ -30,24 +30,12 @@ app = Flask(
 def serve_index():
     return render_template('index.html')
 
-@app.route('/api/network_status')
-def get_network_status():
+@app.route('/api/local_network_status')
+def get_local_network_status():
     """
-    Retrieves and returns network status information, either from the local machine
-    or a remote host specified by MONITOR_TARGET_HOST.
+    Retrieves and returns network status information from the local machine.
+    This function processes 'arp -a' command output to list connected devices.
     """
-    if MONITOR_TARGET_HOST:
-        try:
-            # Construct the URL for the remote API endpoint
-            remote_url = f"http://{MONITOR_TARGET_HOST}:5000/api/network_status"
-            app.logger.info(f"Fetching network status from remote host: {remote_url}")
-            response = requests.get(remote_url)
-            response.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
-            return jsonify(response.json())
-        except requests.exceptions.RequestException as e:
-            app.logger.error(f"Error fetching network status from remote host {MONITOR_TARGET_HOST}: {e}")
-            return jsonify({'error': f"Could not connect to remote host {MONITOR_TARGET_HOST} for network status: {e}"}), 500
-    
     devices = []
     try:
         if sys.platform.startswith('win'):
@@ -106,24 +94,34 @@ def get_network_status():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/system_info')
-def get_system_info():
+@app.route('/api/remote_network_status')
+def get_remote_network_status():
     """
-    Retrieves and returns various system performance metrics, either from the local machine
-    or a remote host specified by MONITOR_TARGET_HOST.
+    Fetches network status information from a remote host specified by MONITOR_TARGET_HOST.
+    This endpoint is active only if MONITOR_TARGET_HOST environment variable is set.
+    It expects the remote host to be running a compatible web_monitor Flask application
+    that exposes a /api/local_network_status endpoint.
     """
-    if MONITOR_TARGET_HOST:
-        try:
-            # Construct the URL for the remote API endpoint
-            remote_url = f"http://{MONITOR_TARGET_HOST}:5000/api/system_info"
-            app.logger.info(f"Fetching system info from remote host: {remote_url}")
-            response = requests.get(remote_url)
-            response.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
-            return jsonify(response.json())
-        except requests.exceptions.RequestException as e:
-            app.logger.error(f"Error fetching system info from remote host {MONITOR_TARGET_HOST}: {e}")
-            return jsonify({'error': f"Could not connect to remote host {MONITOR_TARGET_HOST} for system info: {e}"}), 500
+    if not MONITOR_TARGET_HOST:
+        return jsonify({'error': 'MONITOR_TARGET_HOST is not set for remote network status.'}), 400
+    
+    try:
+        # Construct the URL for the remote API endpoint
+        remote_url = f"http://{MONITOR_TARGET_HOST}:5000/api/local_network_status"
+        app.logger.info(f"Fetching remote network status from: {remote_url}")
+        response = requests.get(remote_url)
+        response.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
+        return jsonify(response.json())
+    except requests.exceptions.RequestException as e:
+        app.logger.error(f"Error fetching remote network status from {MONITOR_TARGET_HOST}: {e}")
+        return jsonify({'error': f"Could not connect to remote host {MONITOR_TARGET_HOST} for network status: {e}"}), 500
 
+@app.route('/api/local_system_info')
+def get_local_system_info():
+    """
+    Retrieves and returns various system performance metrics from the local machine.
+    Utilizes the psutil library for cross-platform system information retrieval.
+    """
     try:
         # psutil.cpu_percent returns a system-wide CPU utilization as a percentage.
         # interval=1 makes it a blocking call for 1 second to get a meaningful sample.
@@ -161,6 +159,28 @@ def get_system_info():
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/remote_system_info')
+def get_remote_system_info():
+    """
+    Fetches system performance metrics from a remote host specified by MONITOR_TARGET_HOST.
+    This endpoint is active only if MONITOR_TARGET_HOST environment variable is set.
+    It expects the remote host to be running a compatible web_monitor Flask application
+    that exposes a /api/local_system_info endpoint.
+    """
+    if not MONITOR_TARGET_HOST:
+        return jsonify({'error': 'MONITOR_TARGET_HOST is not set for remote system info.'}), 400
+    
+    try:
+        # Construct the URL for the remote API endpoint
+        remote_url = f"http://{MONITOR_TARGET_HOST}:5000/api/local_system_info"
+        app.logger.info(f"Fetching remote system info from: {remote_url}")
+        response = requests.get(remote_url)
+        response.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
+        return jsonify(response.json())
+    except requests.exceptions.RequestException as e:
+        app.logger.error(f"Error fetching remote system info from {MONITOR_TARGET_HOST}: {e}")
+        return jsonify({'error': f"Could not connect to remote host {MONITOR_TARGET_HOST} for system info: {e}"}), 500
 
 @app.route('/api/deploy/<action_name>')
 def deploy_action(action_name):

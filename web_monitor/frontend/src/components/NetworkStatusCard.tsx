@@ -1,20 +1,25 @@
 import React from 'react';
-import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { NetworkDevice } from '../hooks/useNetworkStatus'; // Import NetworkDevice interface
 
-const NetworkStatusCard: React.FC = () => {
-  const { devices, error, loading } = useNetworkStatus();
+interface NetworkStatusCardProps {
+  title: string;
+  networkStatus: NetworkDevice[];
+  error: string | null;
+  loading: boolean;
+}
 
+const NetworkStatusCard: React.FC<NetworkStatusCardProps> = ({ title, networkStatus, error, loading }) => {
   return (
     <div className="p-4 border rounded-lg shadow-sm bg-white dark:bg-gray-800">
-      <h2 className="text-xl font-semibold mb-4 border-b pb-2">Local Network Devices</h2>
-      {loading && <p>Loading network status...</p>}
-      {error && <p className="text-red-500">Error: {error}</p>}
-      {!loading && !error && devices.length === 0 && (
-        <p>No devices found in ARP cache.</p>
+      <h2 className="text-xl font-semibold mb-4 border-b pb-2">{title}</h2>
+      {loading && <p>Loading {title.toLowerCase()}...</p>}
+      {error && <p className="text-red-500">Error fetching {title.toLowerCase()}: {error}</p>}
+      {!loading && !error && networkStatus.length === 0 && (
+        <p>No devices found in ARP cache for {title.toLowerCase()}.</p>
       )}
-      {!loading && !error && devices.length > 0 && (
+      {!loading && !error && networkStatus.length > 0 && (
         <div className="space-y-2">
-          {devices.map((device, index) => (
+          {networkStatus.map((device, index) => (
             <div key={index} className="flex justify-between items-center border-b last:border-b-0 py-1">
               <div>
                 <p className="font-medium">{device.ip}</p>

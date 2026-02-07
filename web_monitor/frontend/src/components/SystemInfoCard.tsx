@@ -1,11 +1,16 @@
 import React from 'react';
-import { useSystemInfo } from '../hooks/useSystemInfo';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Assuming shadcn cards
 import { Progress } from '@/components/ui/progress'; // Shadcn Progress component
+import { SystemInfo } from '../hooks/useSystemInfo'; // Import the SystemInfo interface
 
-const SystemInfoCard: React.FC = () => {
-  const { info, error, loading } = useSystemInfo();
+interface SystemInfoCardProps {
+  title: string;
+  systemInfo: SystemInfo | null;
+  error: string | null;
+  loading: boolean;
+}
 
+const SystemInfoCard: React.FC<SystemInfoCardProps> = ({ title, systemInfo, error, loading }) => {
   const getProgressColorClass = (value: number) => {
     if (value > 80) return 'bg-red-500';
     if (value > 50) return 'bg-yellow-500';
@@ -15,40 +20,40 @@ const SystemInfoCard: React.FC = () => {
   return (
     <Card className="col-span-1">
       <CardHeader>
-        <CardTitle>Jetson System Status</CardTitle>
+        <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {loading && <p>Loading system info...</p>}
-        {error && <p className="text-red-500">Error: {error}</p>}
-        {!loading && !error && info && (
+        {loading && <p>Loading {title.toLowerCase()}...</p>}
+        {error && <p className="text-red-500">Error fetching {title.toLowerCase()}: {error}</p>}
+        {!loading && !error && systemInfo && (
           <>
             <div className="space-y-2">
               <div className="flex justify-between items-center text-sm">
                 <span>CPU Usage:</span>
-                <span>{info.cpu_percent.toFixed(1)}%</span>
+                <span>{systemInfo.cpu_percent.toFixed(1)}%</span>
               </div>
-              <Progress value={info.cpu_percent} className={getProgressColorClass(info.cpu_percent)} />
+              <Progress value={systemInfo.cpu_percent} className={getProgressColorClass(systemInfo.cpu_percent)} />
             </div>
 
             <div className="space-y-2">
               <div className="flex justify-between items-center text-sm">
                 <span>Memory Usage:</span>
-                <span>{info.memory_percent.toFixed(1)}% ({info.memory_used_gb}GB / {info.memory_total_gb}GB)</span>
+                <span>{systemInfo.memory_percent.toFixed(1)}% ({systemInfo.memory_used_gb}GB / {systemInfo.memory_total_gb}GB)</span>
               </div>
-              <Progress value={info.memory_percent} className={getProgressColorClass(info.memory_percent)} />
+              <Progress value={systemInfo.memory_percent} className={getProgressColorClass(systemInfo.memory_percent)} />
             </div>
 
             <div className="space-y-2">
               <div className="flex justify-between items-center text-sm">
                 <span>Disk Usage:</span>
-                <span>{info.disk_percent.toFixed(1)}% ({info.disk_used_gb}GB / {info.disk_total_gb}GB)</span>
+                <span>{systemInfo.disk_percent.toFixed(1)}% ({systemInfo.disk_used_gb}GB / {systemInfo.disk_total_gb}GB)</span>
               </div>
-              <Progress value={info.disk_percent} className={getProgressColorClass(info.disk_percent)} />
+              <Progress value={systemInfo.disk_percent} className={getProgressColorClass(systemInfo.disk_percent)} />
             </div>
 
             <div className="flex justify-between items-center text-sm">
               <span>Uptime:</span>
-              <span className="font-medium">{info.uptime}</span>
+              <span className="font-medium">{systemInfo.uptime}</span>
             </div>
           </>
         )}

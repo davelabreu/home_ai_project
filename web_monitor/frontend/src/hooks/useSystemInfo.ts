@@ -5,45 +5,72 @@ interface SystemInfo {
   memory_percent: number;
   memory_total_gb: number;
   memory_used_gb: number;
-  disk_percent: number; // Added
-  disk_total_gb: number; // Added
-  disk_used_gb: number; // Added
-  uptime: string; // Added
+  disk_percent: number;
+  disk_total_gb: number;
+  disk_used_gb: number;
+  uptime: string;
 }
 
-interface SystemStatus {
-  info: SystemInfo | null;
-  error: string | null;
-  loading: boolean;
+interface DualSystemStatus {
+  local: {
+    info: SystemInfo | null;
+    error: string | null;
+    loading: boolean;
+  };
+  remote: {
+    info: SystemInfo | null;
+    error: string | null;
+    loading: boolean;
+  };
 }
 
 export const useSystemInfo = () => {
-  const [status, setStatus] = useState<SystemStatus>({
-    info: null,
-    error: null,
-    loading: true,
+  const [status, setStatus] = useState<DualSystemStatus>({
+    local: { info: null, error: null, loading: true },
+    remote: { info: null, error: null, loading: true },
   });
 
   useEffect(() => {
-    const fetchInfo = async () => {
+    const fetchLocalInfo = async () => {
       try {
-        const response = await fetch('/api/system_info');
+        const response = await fetch('/api/local_system_info');
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
         if (data.error) {
-          setStatus({ info: null, error: data.error, loading: false });
+          setStatus((prev) => ({ ...prev, local: { info: null, error: data.error, loading: false } }));
         } else {
-          setStatus({ info: data, error: null, loading: false });
+          setStatus((prev) => ({ ...prev, local: { info: data, error: null, loading: false } }));
         }
       } catch (e: any) {
-        setStatus({ info: null, error: e.message, loading: false });
+        setStatus((prev) => ({ ...prev, local: { info: null, error: e.message, loading: false } }));
       }
     };
 
-    fetchInfo();
-    const interval = setInterval(fetchInfo, 5000); // Refresh every 5 seconds
+    const fetchRemoteInfo = async () => {
+      try {
+        const response = await fetch('/api/remote_system_info');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        if (data.error) {
+          setStatus((prev) => ({ ...prev, remote: { info: null, error: data.error, loading: false } }));
+        } else {
+          setStatus((prev) => ({ ...prev, remote: { info: data, error: null, loading: false } }));
+        }
+      } catch (e: any) {
+        setStatus((prev) => ({ ...prev, remote: { info: null, error: e.message, loading: false } }));
+      }
+    };
+
+    fetchLocalInfo();
+    fetchRemoteInfo();
+    const interval = setInterval(() => {
+      fetchLocalInfo();
+      fetchRemoteInfo();
+    }, 5000); // Refresh every 5 seconds
 
     return () => clearInterval(interval);
   }, []);
