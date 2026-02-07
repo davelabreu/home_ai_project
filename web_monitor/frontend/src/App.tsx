@@ -1,9 +1,10 @@
-import React, { useEffect } from 'react';
+import React from 'react'; // Removed useEffect here
 import NetworkStatusCard from './components/NetworkStatusCard';
 import SystemInfoCard from './components/SystemInfoCard';
 import { useSystemInfo } from './hooks/useSystemInfo'; // Import the updated hook
 import { useNetworkStatus } from './hooks/useNetworkStatus'; // Import the updated hook
 import { useConfig } from './hooks/useConfig'; // Import the new config hook
+import FaviconChanger from './components/FaviconChanger'; // Import the new FaviconChanger component
 import './index.css'; // Tailwind CSS directives
 
 // Import the SVG logos
@@ -18,31 +19,16 @@ function App() {
   // Determine header content based on configuration
   const isJetsonApp = !monitor_target_host_set; // If MONITOR_TARGET_HOST is not set, this is the Jetson's local app
 
-  useEffect(() => {
-    if (!configLoading) {
-      // Dynamically set favicon
-      let link: HTMLLinkElement | null = document.querySelector("link[rel~='icon']");
-      if (!link) {
-        link = document.createElement('link');
-        link.rel = 'icon';
-        document.getElementsByTagName('head')[0].appendChild(link);
-      }
-      link.href = isJetsonApp ? NvidiaLogo : DesktopIcon;
-      link.type = 'image/svg+xml';
-
-      // Dynamically set document title
-      document.title = isJetsonApp ? "Jetson Dashboard" : "PC Dashboard";
-    }
-  }, [isJetsonApp, configLoading]);
-
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4">
+      <FaviconChanger isJetsonApp={isJetsonApp} configLoading={configLoading} /> {/* Render FaviconChanger */}
+
       <header className="py-6 border-b border-gray-200 dark:border-gray-700">
         <div className="container mx-auto px-4 flex items-center justify-center space-x-4">
           {isJetsonApp ? (
-            <img src={NvidiaLogo} alt="Nvidia Logo" style={{ height: '1.5rem', width: 'auto' }} />
+            <img src={NvidiaLogo} alt="Nvidia Logo" style={{ height: '3rem', width: 'auto' }} />
           ) : (
-            <img src={DesktopIcon} alt="Desktop Icon" style={{ height: '1.5rem', width: 'auto' }} />
+            <img src={DesktopIcon} alt="Desktop Icon" style={{ height: '3rem', width: 'auto' }} />
           )}
           <div>
             <h1 className="text-3xl font-bold text-center">
