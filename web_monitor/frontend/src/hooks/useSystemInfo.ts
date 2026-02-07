@@ -56,7 +56,7 @@ export const useSystemInfo = () => {
         return;
       }
       try {
-        const response = await fetch(`http://${monitorTargetHost}:8050/api/local_system_info`); // Use local_system_info on remote host
+        const response = await fetch(`http://${monitorTargetHost}:5000/api/local_system_info`); // Use local_system_info on remote host, port 5000
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }

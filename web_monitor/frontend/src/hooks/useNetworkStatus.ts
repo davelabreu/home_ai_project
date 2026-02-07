@@ -51,7 +51,7 @@ export const useNetworkStatus = () => {
         return;
       }
       try {
-        const response = await fetch(`http://${monitorTargetHost}:8050/api/local_network_status`); // Use local_network_status on remote host
+        const response = await fetch(`http://${monitorTargetHost}:5000/api/local_network_status`); // Use local_network_status on remote host, port 5000
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }

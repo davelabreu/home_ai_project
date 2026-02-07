@@ -35,8 +35,8 @@ const ChatCard: React.FC = () => {
     try {
       // Determine the API URL based on whether a remote host is configured
       const chatApiUrl = monitorTargetHost
-                         ? `http://${monitorTargetHost}:8050/api/chat` // Use port 8050
-                         : `http://localhost:8050/api/chat`; // Default to local if no remote host is set, use port 8050
+                         ? `http://${monitorTargetHost}:5000/api/chat` // Use port 5000
+                         : `http://localhost:5000/api/chat`; // Default to local if no remote host is set, use port 5000
 
       const response = await fetch(chatApiUrl, {
         method: 'POST',

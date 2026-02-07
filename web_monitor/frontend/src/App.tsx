@@ -33,7 +33,7 @@ function App() {
 
     setRebootMessage(`Attempting to reboot remote host (${monitorTargetHost})...`);
     try {
-      const response = await fetch(`http://${monitorTargetHost}:8050/api/command/reboot`, { method: 'POST' });
+      const response = await fetch(`http://${monitorTargetHost}:5000/api/command/reboot`, { method: 'POST' });
       const data = await response.json();
 
       if (response.ok) {
