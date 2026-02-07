@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import NetworkStatusCard from './components/NetworkStatusCard';
 import SystemInfoCard from './components/SystemInfoCard';
 import { useSystemInfo } from './hooks/useSystemInfo'; // Import the updated hook
@@ -17,6 +17,23 @@ function App() {
 
   // Determine header content based on configuration
   const isJetsonApp = !monitor_target_host_set; // If MONITOR_TARGET_HOST is not set, this is the Jetson's local app
+
+  useEffect(() => {
+    if (!configLoading) {
+      // Dynamically set favicon
+      let link: HTMLLinkElement | null = document.querySelector("link[rel~='icon']");
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.getElementsByTagName('head')[0].appendChild(link);
+      }
+      link.href = isJetsonApp ? NvidiaLogo : DesktopIcon;
+      link.type = 'image/svg+xml';
+
+      // Dynamically set document title
+      document.title = isJetsonApp ? "Jetson Dashboard" : "PC Dashboard";
+    }
+  }, [isJetsonApp, configLoading]);
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4">
