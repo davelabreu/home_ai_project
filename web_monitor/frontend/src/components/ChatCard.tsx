@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { useConfig } from '../../hooks/useConfig'; // Import useConfig
+import { useConfig } from '../hooks/useConfig'; // Corrected import path
 
 interface Message {
   text: string;
