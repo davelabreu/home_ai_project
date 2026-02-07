@@ -4,6 +4,9 @@ __pycache__/
 *.pyc
 instance/
 
+# external_templates
+external_templates/
+
 # Frontend
 web_monitor/frontend/node_modules/
 web_monitor/frontend/dist/
