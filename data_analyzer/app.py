@@ -98,4 +98,4 @@ def parse_contents(contents, filename, date):
 if __name__ == '__main__':
     # The Dash app will run on http://127.0.0.1:8050/ by default.
     # debug=True enables the hot-reloading and debug tools.
-    app.run_server(debug=True)
+    app.run(debug=True)
