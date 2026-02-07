@@ -26,7 +26,7 @@ EXPOSE 5000
 # Define environment variables for Flask
 ENV FLASK_APP=app.py
 ENV FLASK_RUN_HOST=0.0.0.0
-ENV FLASK_DEBUG=1 # Enable for debug mode (for development)
+ENV FLASK_DEBUG=1
 
 # Run app.py when the container launches
 CMD ["flask", "run"]
