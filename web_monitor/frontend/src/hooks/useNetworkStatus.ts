@@ -25,7 +25,7 @@ export const useNetworkStatus = () => {
     local: { devices: [], error: null, loading: true },
     remote: { devices: [], error: null, loading: true },
   });
-  const { monitorTargetHost, monitor_target_host_set } = useConfig(); // Get monitorTargetHost and set status
+  const { monitorTargetHost, monitor_target_host_set, monitorTargetPort } = useConfig(); // Get monitorTargetHost, monitorTargetPort and set status
 
   useEffect(() => {
     const fetchLocalStatus = async () => {
@@ -46,12 +46,12 @@ export const useNetworkStatus = () => {
     };
 
     const fetchRemoteStatus = async () => {
-      if (!monitor_target_host_set || !monitorTargetHost) {
-        setStatus((prev) => ({ ...prev, remote: { devices: [], error: "Remote host not configured.", loading: false } }));
+      if (!monitor_target_host_set || !monitorTargetHost || !monitorTargetPort) { // Check for monitorTargetPort
+        setStatus((prev) => ({ ...prev, remote: { devices: [], error: "Remote host or port not configured.", loading: false } }));
         return;
       }
       try {
-        const response = await fetch(`http://${monitorTargetHost}:5000/api/local_network_status`); // Use local_network_status on remote host, port 5000
+        const response = await fetch(`http://${monitorTargetHost}:${monitorTargetPort}/api/local_network_status`); // Use monitorTargetPort
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -74,7 +74,7 @@ export const useNetworkStatus = () => {
     }, 30000); // Refresh every 30 seconds
 
     return () => clearInterval(interval);
-  }, [monitorTargetHost, monitor_target_host_set]); // Add monitorTargetHost to dependency array
+  }, [monitorTargetHost, monitor_target_host_set, monitorTargetPort]); // Add monitorTargetPort to dependency array
 
   return status;
 };
