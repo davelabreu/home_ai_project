@@ -1,10 +1,35 @@
 #!/usr/bin/env python3
-from jtop import jtop
-import json
 import sys
 
+# Use stderr for debug messages to avoid interfering with JSON parsing
+print("DEBUG: Script started", file=sys.stderr)
+
+try:
+    from jtop import jtop
+    print("DEBUG: jtop imported successfully", file=sys.stderr)
+except ImportError as e:
+    print(f"DEBUG: Error importing jtop: {e}", file=sys.stderr)
+    sys.exit(1)
+
+import json
+
 def main():
-    with jtop() as jetson:
-        if jetson.ok():
-            # This captures the exact state in a dictionary
-            print(json.dumps(jetson.stats))
+    print("DEBUG: Entering main", file=sys.stderr)
+    try:
+        with jtop() as jetson:
+            print("DEBUG: jtop object created, checking status...", file=sys.stderr)
+            if jetson.ok():
+                print("DEBUG: jtop status OK", file=sys.stderr)
+                # default=str converts datetime objects into ISO format strings
+                print(json.dumps(jetson.stats, default=str))
+                print("DEBUG: stats printed to stdout", file=sys.stderr)
+            else:
+                print("DEBUG: jtop status NOT OK", file=sys.stderr)
+                print(json.dumps({"error": "Could not connect to jetson_stats"}))
+                sys.exit(1)
+    except Exception as e:
+        print(f"DEBUG: Exception in main: {e}", file=sys.stderr)
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
