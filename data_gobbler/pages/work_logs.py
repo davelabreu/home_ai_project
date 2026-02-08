@@ -81,17 +81,22 @@ def layout():
     [Output('log-project-selector', 'value'),
      Output('log-file-selector', 'options', allow_duplicate=True),
      Output('log-file-selector', 'value', allow_duplicate=True)],
-    Input('last-ingested-file', 'data'),
-    prevent_initial_call=True
+    [Input('url', 'pathname'),
+     Input('last-ingested-file', 'data')],
+    prevent_initial_call=False
 )
-def auto_select_ingested_file(last_ingest):
-    if last_ingest and 'project_id' in last_ingest:
+def auto_select_ingested_file(pathname, last_ingest):
+    # Only act if we are on the work-logs page and have data in the store
+    if pathname == '/work-logs' and last_ingest and 'project_id' in last_ingest:
         pid = last_ingest['project_id']
         fname = last_ingest['filename']
-        # Must load options manually here to ensure the value is valid immediately
+        
+        # Load options for the project
         files = DataManager.list_files(pid)
         options = [{'label': f, 'value': f} for f in files]
+        
         return pid, options, fname
+        
     return dash.no_update, dash.no_update, dash.no_update
 
 # --- Existing Callbacks ---
