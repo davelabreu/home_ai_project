@@ -20,7 +20,8 @@ echo "--- 🛡️  Ensuring Port 11434 is free (Killing native Ollama) ---"
 sudo systemctl stop ollama > /dev/null 2>&1
 
 echo "--- 🛠️  Rebuilding & Restarting Stack ---"
-docker compose up --build --no-cache -d --remove-orphans
+docker compose build --no-cache
+docker compose up -d --remove-orphans
 
 if [ $? -eq 0 ]; then
     echo "--- ⏳ Waiting for Ollama container to initialize... ---"
