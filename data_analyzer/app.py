@@ -74,7 +74,56 @@ def render_project_content(project_id):
             html.Div(id='log-analysis-display', style={'marginTop': '20px'})
         ])
 
-# --- Logic for Log Ingestion & Persistence ---
+import requests # Import requests for Netdata API
+
+# --- Helper to ensure directories exist ---
+def ensure_project_dir(project_id):
+    path = os.path.join(PROJECTS_ROOT, project_id)
+    if not os.path.exists(path):
+        os.makedirs(path, exist_ok=True)
+    return path
+
+# Callback to handle BOTH Netdata Fetch and File Upload
+@app.callback(
+    Output('home-stats-display', 'children'),
+    Input('fetch-netdata-btn', 'n_clicks'),
+    prevent_initial_call=True
+)
+def fetch_netdata_stats(n_clicks):
+    if not n_clicks:
+        return ""
+    
+    try:
+        # Netdata API: Get last 1 hour of data for specific charts
+        # Using the internal Docker network name 'netdata'
+        charts = ['system.cpu', 'mem.available', 'system.load']
+        all_data = []
+        
+        for chart in charts:
+            url = f"http://netdata:19999/api/v1/data?chart={chart}&after=-3600&format=json"
+            response = requests.get(url, timeout=5)
+            response.raise_for_status()
+            res_json = response.json()
+            
+            # Convert Netdata JSON to a temporary DataFrame for merging
+            cols = ['time'] + res_json['labels'][1:]
+            chart_df = pd.DataFrame(res_json['data'], columns=cols)
+            chart_df['time'] = pd.to_datetime(chart_df['time'], unit='s')
+            all_data.append(chart_df.set_index('time'))
+
+        # Merge all charts into one master DataFrame
+        df = pd.concat(all_data, axis=1).reset_index()
+        
+        # Persist to disk
+        project_dir = ensure_project_dir('home_jetson')
+        save_path = os.path.join(project_dir, f"netdata_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
+        df.to_csv(save_path, index=False)
+        
+        return render_data_summary(df, f"Successfully fetched {len(df)} records from Netdata")
+    except Exception as e:
+        return html.Div(f"Error fetching from Netdata: {str(e)}", style={'color': 'red'})
+
+# Fixed handle_log_upload with directory safety
 @app.callback(
     Output('log-analysis-display', 'children'),
     Input('upload-logs', 'contents'),
@@ -82,13 +131,13 @@ def render_project_content(project_id):
     State('project-selector', 'value')
 )
 def handle_log_upload(contents, filename, project_id):
+    project_dir = ensure_project_dir(project_id)
+    
     if contents is None:
-        # Try to load existing data for the project
-        project_dir = os.path.join(PROJECTS_ROOT, project_id)
-        files = [f for f in os.listdir(project_dir) if f.endswith('.csv')]
+        files = sorted([f for f in os.listdir(project_dir) if f.endswith('.csv')], reverse=True)
         if files:
             df = pd.read_csv(os.path.join(project_dir, files[0]))
-            return render_data_summary(df, f"Restored from {files[0]}")
+            return render_data_summary(df, f"Restored latest data: {files[0]}")
         return html.P("No data ingested yet for this project.")
 
     # Process new upload
@@ -96,8 +145,8 @@ def handle_log_upload(contents, filename, project_id):
     decoded = base64.b64decode(content_string)
     df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
     
-    # Persist to disk
-    save_path = os.path.join(PROJECTS_ROOT, project_id, f"ingested_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
+    # Safety: ensure dir exists before pandas tries to write
+    save_path = os.path.join(project_dir, f"ingested_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
     df.to_csv(save_path, index=False)
     
     return render_data_summary(df, f"Successfully ingested {filename}")
