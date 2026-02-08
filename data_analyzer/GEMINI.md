@@ -1,24 +1,30 @@
-# Data Analyzer Sub-Project Context
-
-This document manages the evolution of the `data_analyzer` component, which has evolved from a simple CSV viewer into the **AI Workbench**.
+# Data Analyzer: AI Workbench Context
 
 ## Core Vision
-A "Low-Code Analytics Platform" for multi-project data ingestion, visualization, and persistent storage. It allows the user to manage professional logs and home telemetry in a unified interface.
+A "Low-Code Analytics Platform" for multi-project data ingestion, visualization, and persistent storage.
 
-## Architecture: The "Workbench" Pattern
-1.  **Project-Based**: All data is siloed by Project ID (e.g., `home_jetson`, `work_logs`).
-2.  **Configuration as Code**: Projects are defined in `projects.json`.
-3.  **Persistence**: Data is saved as CSV files in `projects/[project_id]/` and persists via Docker volume mounts.
-4.  **Template Engine (Future)**: Specific visualization templates mapped to project types.
+## 🏗️ Strict Architectural Guardrails (DO NOT BREAK)
 
-## Current State (v0.2.0)
-- **Project Registry**: Dynamic project loading via JSON.
-- **Data Library**: Automatic scanning and listing of ingested files in the sidebar.
-- **Jetson Fetcher**: Built-in logic to pull real-time hardware metrics (Power, CPU, Freq) from Netdata.
-- **Persistent Ingestion**: Standardized file upload with auto-saving to project directories.
+### 1. The "Hidden DOM" Rule
+**Constraint**: Dash callbacks will crash if an `Input` ID is missing from the layout.
+**Implementation**: All project-specific controls (e.g., `upload-logs`, `fetch-netdata-btn`) must be declared in the main `app.layout` at boot. 
+**Expansion**: To add a new project type, add its controls to `app.layout` and use the `toggle_controls` callback to manage visibility via CSS `display: block/none`. **Never** use conditional rendering (returning different components from a callback) for Input objects.
+
+### 2. Project-Based Silos
+**Registry**: `projects.json` is the single source of truth for project metadata.
+**Storage**: Data MUST be stored in `projects/[project_id]/`. 
+**Naming**: Ingested files should follow `[type]_[timestamp].csv` format for easy sorting.
+
+### 3. The "Shared Display" Pattern
+**Consistency**: All visualizations and data previews MUST render into the `shared-display-area`.
+**State**: Use the `data-update-signal` (dcc.Store) to notify the sidebar/library that the filesystem has changed.
+
+## Current State (v0.2.2 - Stable)
+- **Navigator**: Sidebar with Project Registry and Data Library.
+- **Persistence**: Host-backed CSV storage via Docker volumes.
+- **Stability**: Resolved all callback dependency errors via the Hidden DOM pattern.
 
 ## Roadmap
-- [ ] **Data Selection**: Enable clicking items in the 'Data Library' to reload historical views.
-- [ ] **Custom Templates**: Implement specific visual layouts for `hardware_telemetry` vs `log_generic`.
-- [ ] **Memory Persistence**: Implement `dcc.Store` for faster session switching.
-- [ ] **Export Engine**: Ability to clean and re-export merged datasets.
+- [ ] **Template Engine**: Map `project['template']` to specific Plotly configurations.
+- [ ] **Data Cleanup**: Add a "Delete" button to items in the Data Library.
+- [ ] **Sub-filtering**: Ability to filter the active DataFrame by column values.

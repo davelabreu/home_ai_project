@@ -150,7 +150,7 @@ def handle_data_actions(n_fetch, upload_contents, n_library_clicks, project_id, 
                     all_data.append(tmp.set_index('time'))
             
             df = pd.concat(all_data, axis=1).sort_index().reset_index()
-            save_path = os.path.join(ensure_project_dir('home_jetson'), f"netdata_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
+            save_path = os.path.join(ensure_project_dir('home_jetson'), f"netdata_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')}.csv")
             df.to_csv(save_path, index=False)
             return render_data_summary(df, "Fetched new data from Netdata"), current_signal + 1
         except Exception as e:
@@ -160,7 +160,7 @@ def handle_data_actions(n_fetch, upload_contents, n_library_clicks, project_id, 
     elif 'upload-logs' in trigger_id and upload_contents:
         content_type, content_string = upload_contents.split(',')
         df = pd.read_csv(io.StringIO(base64.b64decode(content_string).decode('utf-8')))
-        save_path = os.path.join(ensure_project_dir(project_id), f"ingested_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
+        save_path = os.path.join(ensure_project_dir(project_id), f"ingested_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')}.csv")
         df.to_csv(save_path, index=False)
         return render_data_summary(df, f"Ingested {upload_filename}"), current_signal + 1
 
