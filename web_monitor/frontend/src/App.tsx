@@ -142,7 +142,9 @@ function App() {
 
               {/* Chat Card - Positioned in the grid */}
               {(isJetsonApp || monitor_target_host_set) && (
-                <ChatCard />
+                <div className="md:col-span-2 lg:col-span-3">
+                  <ChatCard />
+                </div>
               )}
 
               {/* Network Cards */}

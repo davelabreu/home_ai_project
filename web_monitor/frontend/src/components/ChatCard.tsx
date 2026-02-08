@@ -66,7 +66,7 @@ const ChatCard: React.FC = () => {
   const isChatDisabled = isSending || configLoading;
 
   return (
-    <Card className="col-span-1 md:col-span-2 lg:col-span-1 h-[400px] flex flex-col transition-all">
+    <Card className="h-[400px] flex flex-col transition-all">
       <CardHeader className="py-3 px-4">
         <CardTitle className="text-sm font-semibold">Chat with AI (Ollama)</CardTitle>
       </CardHeader>
