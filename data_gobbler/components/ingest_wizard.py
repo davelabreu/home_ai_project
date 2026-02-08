@@ -58,7 +58,8 @@ def render_ingest_wizard():
      Output("wizard-preview-area", "children"),
      Output("wizard-submit", "disabled"),
      Output("wizard-file-info", "children"),
-     Output("url", "pathname")],
+     Output("url", "pathname"),
+     Output("wizard-project-info", "children")],
     [Input("open-wizard-btn", "n_clicks"),
      Input("home-ingest-btn", "n_clicks"),
      Input("wizard-cancel", "n_clicks"),
@@ -72,13 +73,23 @@ def render_ingest_wizard():
 def handle_wizard_logic(n_open_nav, n_open_home, n_cancel, n_submit, contents, project_id, is_open, filename):
     ctx = dash.callback_context
     if not ctx.triggered:
-        return is_open, dash.no_update, True, "", dash.no_update
+        return is_open, dash.no_update, True, "", dash.no_update, ""
     
     trigger = ctx.triggered[0]['prop_id']
+    projects = DataManager.get_projects()
+    project_info = ""
+    
+    # Selected Project Display logic
+    if project_id:
+        p = projects.get(project_id, {})
+        project_info = dbc.Badge(f"Selected: {p.get('name')}", color="info", className="p-2")
 
     # 1. Open/Close Logic
     if ("open-wizard-btn" in trigger or "home-ingest-btn" in trigger) and (n_open_nav or n_open_home):
-        return True, "", True, "", dash.no_update
+        return True, "", True, "", dash.no_update, ""
+
+    if "wizard-cancel" in trigger:
+        return False, "", True, "", dash.no_update, ""
 
     # 2. Submission Logic (The actual 'Gobbling')
     if "wizard-submit" in trigger and contents and project_id:
@@ -88,7 +99,6 @@ def handle_wizard_logic(n_open_nav, n_open_home, n_cancel, n_submit, contents, p
             df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
             
             # --- Project-Specific Processing ---
-            projects = DataManager.get_projects()
             template = projects[project_id].get('template')
             
             if template == 'encoder_quadrature':
@@ -98,9 +108,9 @@ def handle_wizard_logic(n_open_nav, n_open_home, n_cancel, n_submit, contents, p
             new_filename = DataManager.save_dataframe(df, project_id, prefix="ingest")
             
             # Close modal and redirect to work-logs
-            return False, dash.no_update, True, "", "/work-logs"
+            return False, dash.no_update, True, "", "/work-logs", ""
         except Exception as e:
-            return True, dbc.Alert(f"❌ Ingestion Failed: {e}", color="danger"), False, filename, dash.no_update
+            return True, dbc.Alert(f"❌ Ingestion Failed: {e}", color="danger"), False, filename, dash.no_update, project_info
 
     # 3. Preview/Verification Logic
     if contents and project_id:
@@ -115,14 +125,14 @@ def handle_wizard_logic(n_open_nav, n_open_home, n_cancel, n_submit, contents, p
                 html.P(f"Target Project: {project_id}", className="mb-0")
             ], color="success")
             
-            return True, preview, False, f"📄 {filename}", dash.no_update
+            return True, preview, False, f"📄 {filename}", dash.no_update, project_info
         except Exception as e:
-            return True, dbc.Alert(f"❌ Error reading file: {e}", color="danger"), True, "", dash.no_update
+            return True, dbc.Alert(f"❌ Error reading file: {e}", color="danger"), True, "", dash.no_update, project_info
 
     if contents:
-        return True, html.P("Please select a project to continue.", className="text-warning"), True, f"📄 {filename}", dash.no_update
+        return True, html.P("Please select a project to continue.", className="text-warning"), True, f"📄 {filename}", dash.no_update, project_info
 
-    return is_open, dash.no_update, True, "", dash.no_update
+    return is_open, dash.no_update, True, "", dash.no_update, project_info
 
 # Note: The actual 'Saving' logic will be added in the next step to ensure 
 # the DataManager integration is clean.
