@@ -1,8 +1,8 @@
 import dash
 from dash import html, dcc, Input, Output, State, callback
 import dash_bootstrap_components as dbc
-from ..utils.data_manager import DataManager
-from ..utils.processors import DataProcessors
+from utils.data_manager import DataManager
+from utils.processors import DataProcessors
 import base64
 import io
 import pandas as pd

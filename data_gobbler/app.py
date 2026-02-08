@@ -1,6 +1,12 @@
 import dash
 from dash import html, dcc
 import dash_bootstrap_components as dbc
+import sys
+import os
+
+# Ensure the app directory is in the path for modular imports
+sys.path.append(os.path.dirname(__file__))
+
 from components.ingest_wizard import render_ingest_wizard
 
 app = dash.Dash(
