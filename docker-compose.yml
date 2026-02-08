@@ -12,6 +12,7 @@ services:
       - "8050:5000" # Maps Jetson 8050 -> Container 5000
     volumes:
       - /var/run/dbus:/var/run/dbus  # Connects container to host system bus
+      - /var/run/docker.sock:/var/run/docker.sock # Allows container to interact with host Docker daemon
     runtime: nvidia
     deploy:
       resources:
