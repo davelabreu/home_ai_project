@@ -264,31 +264,31 @@ def command_reboot():
 
         # and to keep the Flask app clean.
 
-                        # Sends a signal to the host systemd via the mounted D-Bus
+                                # Sends a signal to the host systemd via the mounted D-Bus
 
-                        cmd = [
+                                cmd = [
 
-                            "dbus-send", "--system", "--print-reply", 
+                                    "dbus-send", "--system", "--print-reply", 
 
-                            "--dest=org.freedesktop.login1", 
+                                    "--dest=org.freedesktop.login1", 
 
-                            "/org/freedesktop/login1", 
+                                    "/org/freedesktop/login1", 
 
-                            "org.freedesktop.login1.Manager.Reboot", 
+                                    "org.freedesktop.login1.Manager.Reboot", 
 
-                            "boolean:true"
+                                    "boolean:true"
 
-                        ]
+                                ]
 
-                        subprocess.Popen(cmd,
+                                subprocess.Popen(cmd,
 
-                                         stdout=subprocess.DEVNULL,
+                                                 stdout=subprocess.DEVNULL,
 
-                                         stderr=subprocess.DEVNULL)
+                                                 stderr=subprocess.DEVNULL)
 
-        
+                                
 
-        return jsonify({'status': 'success', 'message': 'System is rebooting.'}), 200
+                                return jsonify({'status': 'success', 'message': 'System is rebooting.'}), 200
 
     except Exception as e:
 
