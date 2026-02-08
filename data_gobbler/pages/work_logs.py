@@ -77,26 +77,23 @@ def layout():
 
     ], fluid=True)
 
+# Callback: Auto-select ingested file
+# We use 'initial_duplicate' to allow allow_duplicate=True while still firing on load
 @callback(
     [Output('log-project-selector', 'value'),
      Output('log-file-selector', 'options', allow_duplicate=True),
      Output('log-file-selector', 'value', allow_duplicate=True)],
     [Input('url', 'pathname'),
      Input('last-ingested-file', 'data')],
-    prevent_initial_call=False
+    prevent_initial_call='initial_duplicate'
 )
 def auto_select_ingested_file(pathname, last_ingest):
-    # Only act if we are on the work-logs page and have data in the store
     if pathname == '/work-logs' and last_ingest and 'project_id' in last_ingest:
         pid = last_ingest['project_id']
         fname = last_ingest['filename']
-        
-        # Load options for the project
         files = DataManager.list_files(pid)
         options = [{'label': f, 'value': f} for f in files]
-        
         return pid, options, fname
-        
     return dash.no_update, dash.no_update, dash.no_update
 
 # --- Existing Callbacks ---
