@@ -35,9 +35,11 @@ To create a robust, simple home automation and AI companion system. The Jetson s
 - [x] Implement chat interface in the dashboard.
 - [ ] Develop a mechanism for Jetson to offload tasks to Main PC.
 
-### Phase 3: Advanced Features & Refinements
-- [x] Implement stable, compact UI with "Restarting" state tracking.
-- [ ] Enhance Data Analyzer microservice with historical metrics.
+### Phase 3: Infrastructure & Telemetry (Master Plan)
+- [ ] Deploy Netdata for deep hardware telemetry on Jetson.
+- [ ] Set up Homepage as a unified entry point/dashboard.
+- [ ] Configure `services.yaml` and `widgets.yaml` for Homepage integration.
+- [ ] Map Netdata metrics (GPU/CPU/RAM) into Homepage widgets.
 - [ ] Configure Reverse Proxy for secure external access.
 - [ ] Automate routine maintenance tasks.
 

@@ -124,6 +124,23 @@ A utility script for command-line interaction with Ollama.
 *   **Configuration**: Uses `OLLAMA_HOST` environment variable, defaulting to `http://localhost:11434`.
 *   **Dependencies**: `requests` (Python).
 
+## Master Plan: Integration Strategy
+
+The project follows a Docker-centric workflow where `docker-compose.yml` is the single source of truth.
+
+### Phase 1: The "Always-On" Infrastructure
+Deploy **Netdata** and **Homepage** as sidecars to the existing AI services on the Jetson.
+- **Netdata**: Configured for NVIDIA Jetson with `pid: host` and specific volume mounts for hardware visibility.
+- **Homepage**: Connects to the Docker socket for auto-discovery and uses Netdata API for live widgets.
+
+### Phase 2: Configuration as Code
+Generate YAML configurations for Homepage:
+- **services.yaml**: Groups links into 'Core AI' (Ollama), 'Management' (Web Monitor, Netdata), and 'Remote' (Main PC).
+- **widgets.yaml**: Pulls Netdata metrics (GPU temps, CPU load) into the Homepage header.
+
+### Phase 3: Telemetry & Specialized Widgets
+Advanced integration of Jetson-specific hardware stats (CPU load, GPU temperature, RAM usage) into Homepage using Netdata's 'chart' format.
+
 ## Project Milestones
 
 ### [v0.1.0] - 2026-02-08: Stable Dashboard Release
