@@ -94,6 +94,7 @@ A client-server web application providing real-time monitoring and control. This
 
 A specialized microservice for professional data analysis and home telemetry.
 
+*   **Status**: Maintenance/Production Mode (Active development moved to standalone repo).
 *   **Purpose**: Multi-project data ingestion, persistent storage, and visualization.
 *   **Context**: Managed via `data_analyzer/GEMINI.md`.
 *   **Key Features**:
@@ -101,6 +102,7 @@ A specialized microservice for professional data analysis and home telemetry.
     *   **Data Library**: Automatic listing of historical ingested files in the sidebar.
     *   **Jetson Telemetry Fetcher**: Direct API integration with Netdata for hardware stats.
     *   **Persistence**: Data saved to host disk via Docker volumes.
+*   **Future Vision**: Integrated lightweight LLM (on Jetson) for pre-plotting data organization and parsing.
 *   **Technologies**: Python Dash, Pandas, Plotly, Requests.
 
 ### 3. `scripts/ollama_chat.py`

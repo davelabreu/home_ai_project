@@ -42,10 +42,11 @@ To create a robust, simple home automation and AI companion system. The Jetson s
 - [x] Integrate **AI Workbench** (Data Analyzer) with real-time Netdata metrics.
 
 ### Phase 4: Advanced Analytics & Orchestration
+- [ ] Transition AI Workbench to Modular Architecture (External Repo).
 - [ ] Implement data selection and historical reload in AI Workbench.
 - [ ] Develop custom visualization templates for specific log types.
+- [ ] Integrate lightweight LLM for automated data parsing/organization.
 - [ ] Set up Wake-on-LAN (WoL) for Main PC integration.
-- [ ] Configure Reverse Proxy for secure external access.
 
 ## Milestones
 
