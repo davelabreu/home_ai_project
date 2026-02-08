@@ -76,10 +76,10 @@ def handle_wizard_logic(n_open, n_cancel, n_submit, contents, project_id, is_ope
     trigger = ctx.triggered[0]['prop_id']
 
     # 1. Open/Close Logic
-    if "open-wizard-btn" in trigger:
+    if "open-wizard-btn" in trigger and n_open:
         return True, "", True, "", dash.no_update
     
-    if "wizard-cancel" in trigger:
+    if "wizard-cancel" in trigger and n_cancel:
         return False, "", True, "", dash.no_update
 
     # 2. Submission Logic (The actual 'Gobbling')
