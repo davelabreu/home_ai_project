@@ -52,10 +52,15 @@ A client-server web application providing real-time monitoring and control. This
     *   `/api/remote_network_status`: Forwards network status request to `MONITOR_TARGET_HOST`.
     *   `/api/local_system_info`: Gathers local CPU, memory, disk, uptime.
     *   `/api/remote_system_info`: Forwards system info request to `MONITOR_TARGET_HOST`.
-    *   `/api/jetson_gpu_info`: Retrieves Jetson GPU stats (`tegrastats`). Forwards from PC to Jetson.
-    *   `/api/command/reboot` (POST): Handles soft (Docker restart) and hard (system `dbus-send`) reboots on Jetson, and forwards requests from PC.
+    *   `/api/jetson_gpu_info`: Retrieves Jetson GPU stats. Uses `scripts/get_stats.py` (jtop) on Jetson; forwards from PC.
+    *   `/api/docker_services`: Lists running containers and their status.
+    *   `/api/docker_services/restart` (POST): Restarts a specific container by name.
+    *   `/api/command/reboot` (POST): Handles soft (Docker restart) and hard (system `dbus-send`) reboots on Jetson.
     *   `/api/chat` (POST): Interacts with a local Ollama server.
-    *   `/api/config`: Provides `MONITOR_TARGET_HOST` status and value to the frontend.
+    *   `/api/config`: Provides environment configuration to the frontend.
+
+*   **Helper Scripts**:
+    *   `scripts/get_stats.py`: A verified `jtop`-based script used by the backend to reliably extract Jetson hardware metrics (Temperature, Power, GPU Usage).
 
 *   **Target Metrics (Inspiration from `jetson-stats-grafana-dashboard`)**:
     *   **Processor**: CPU usage (per-core and total), GPU usage (GR3D), and EMC (memory controller) usage.
