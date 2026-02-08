@@ -217,7 +217,6 @@ def get_jetson_gpu_info():
         
         # The last line of tegrastats output usually contains the most recent data
         last_line = output_lines[-1] if output_lines else ""
-        app_logger.info(f"Raw tegrastats last_line for parsing: '{last_line}'")
         
         gpu_info = {
             'gpu_percent': None,
@@ -228,24 +227,23 @@ def get_jetson_gpu_info():
             'ram_total_mb': None,
         }
 
-        # Regex patterns to extract information based on provided output:
-        # Example line: 02-07-2026 22:52:40 RAM 4229/7620MB (...) GR3D_FREQ 0% (...) gpu@53.406C (...) VDD_IN 6488mW/6488mW
+        # Regex patterns updated based on actual tegrastats output:
+        # Example: 02-08-2026 04:00:07 RAM 4263/7620MB (...) EMC_FREQ 0%@3199 GR3D_FREQ 0%@[1018] (...) gpu@53.875C (...) VDD_IN 6528mW/6528mW
 
         # GPU Usage (GR3D_FREQ percentage)
         gr3d_percent_match = re.search(r'GR3D_FREQ (\d+)%', last_line)
         if gr3d_percent_match:
             gpu_info['gpu_percent'] = int(gr3d_percent_match.group(1))
 
-        # EMC Usage (Memory Controller) - Not present in provided tegrastats output, so this will likely be None
-        emc_match = re.search(r'EMC (\d+)%', last_line)
+        # EMC Usage (Memory Controller)
+        emc_match = re.search(r'EMC_FREQ (\d+)%', last_line)
         if emc_match:
             gpu_info['emc_percent'] = int(emc_match.group(1))
 
-        # GPU Temperature (e.g., gpu@53.406C)
+        # GPU Temperature (e.g., gpu@53.875C)
         temp_match = re.search(r'gpu@(\d+\.?\d*)C', last_line)
         if temp_match:
             gpu_info['gpu_temp_c'] = float(temp_match.group(1))
-        # Note: 'TMON @' or 'GPU@' might also be present for temperature
 
         # Power (VDD_IN xxxmW/yyymW) - taking the first value
         power_match = re.search(r'VDD_IN (\d+)mW', last_line)
