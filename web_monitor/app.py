@@ -15,11 +15,7 @@ from flask_cors import CORS # Import CORS
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 app_logger = logging.getLogger(__name__)
 
-# Conditional import for paramiko, only for non-Windows platforms
-if sys.platform != 'win32':
-    import paramiko # Import paramiko for SSH functionality
-else:
-    app_logger.warning("Running on Windows, paramiko will not be imported.")
+# paramiko import and SSH related functions removed as dbus-send is used for host reboot.
 # Load environment variables from .env file
 # This should be called as early as possible.
 load_dotenv()
@@ -46,71 +42,7 @@ app = Flask(
 
 CORS(app, origins=["http://localhost:5000", "http://192.168.1.16:5000"]) # Enable CORS for all routes
 
-if sys.platform != 'win32':
-    def execute_ssh_command(command):
-        """
-        Executes a command on the Jetson host via SSH using Paramiko.
-        Retrieves SSH credentials from environment variables.
-        """
-        app_logger.info(f"Attempting to execute SSH command: {command}")
-        ssh_host = os.environ.get('JETSON_SSH_HOST')
-        ssh_user = os.environ.get('JETSON_SSH_USER')
-        ssh_pass = os.environ.get('JETSON_SSH_PASS')
-        ssh_key_path = os.environ.get('JETSON_SSH_KEY_PATH')
-
-        if not ssh_host or not ssh_user:
-            error_msg = "SSH credentials (JETSON_SSH_HOST, JETSON_SSH_USER) are not set in environment variables."
-            app_logger.error(error_msg)
-            return False, "", "", error_msg
-
-        try:
-            client = paramiko.SSHClient()
-            client.load_system_host_keys()
-            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-            if ssh_key_path and os.path.exists(ssh_key_path):
-                app_logger.info(f"Attempting SSH connection with key: {ssh_key_path}")
-                private_key = paramiko.RSAKey.from_private_key_file(ssh_key_path)
-                client.connect(hostname=ssh_host, username=ssh_user, pkey=private_key)
-            elif ssh_pass:
-                app_logger.info(f"Attempting SSH connection with password for user: {ssh_user}")
-                client.connect(hostname=ssh_host, username=ssh_user, password=ssh_pass)
-            else:
-                error_msg = "Neither SSH password (JETSON_SSH_PASS) nor key path (JETSON_SSH_KEY_PATH) is provided for authentication."
-                app_logger.error(error_msg)
-                return False, "", "", error_msg
-
-            stdin, stdout, stderr = client.exec_command(command)
-            exit_status = stdout.channel.recv_exit_status() # Blocks until command finishes
-            
-            stdout_str = stdout.read().decode().strip()
-            stderr_str = stderr.read().decode().strip()
-
-            if exit_status == 0:
-                app_logger.info(f"SSH command '{command}' executed successfully. Output: {stdout_str}")
-                return True, stdout_str, stderr_str, ""
-            else:
-                error_msg = f"SSH command '{command}' failed with exit status {exit_status}. Stderr: {stderr_str}"
-                app_logger.error(error_msg)
-                return False, stdout_str, stderr_str, error_msg
-
-        except paramiko.AuthenticationException:
-            error_msg = "SSH Authentication failed. Please check your username, password, or key."
-            app_logger.error(error_msg)
-            return False, "", "", error_msg
-        except paramiko.SSHException as e:
-            error_msg = f"Could not establish SSH connection: {e}"
-            app_logger.error(error_msg)
-            return False, "", "", error_msg
-        except Exception as e:
-            error_msg = f"An unexpected error occurred during SSH command execution: {e}"
-            app_logger.error(error_msg)
-            return False, "", "", error_msg
-        finally:
-            if 'client' in locals() and client:
-                client.close()
-else:
-    app_logger.info("Running on Windows, execute_ssh_command function is not available.")
+# execute_ssh_command function removed.
 
 @app.route('/')
 def serve_index():
@@ -346,16 +278,25 @@ def command_reboot():
                 app_logger.error(f"An unexpected error occurred while initiating soft reboot of container: {e}")
                 return jsonify({'status': 'error', 'message': f'An unexpected error occurred during container soft reboot: {str(e)}'}), 500
         elif reboot_type == 'hard':
-            app_logger.info("Attempting to initiate hard reboot via SSH.")
-            command = "sudo shutdown -r now" # Command for hard reboot
-            success, stdout, stderr, error_msg = execute_ssh_command(command)
-
-            if success:
-                app_logger.info(f"Hard reboot command '{command}' sent successfully via SSH.")
+            try:
+                # Sends a signal to the host systemd via the mounted D-Bus
+                # This is a graceful system reboot
+                cmd = [
+                    "dbus-send", "--system", "--print-reply", 
+                    "--dest=org.freedesktop.login1", 
+                    "/org/freedesktop/login1", 
+                    "org.freedesktop.login1.Manager.Reboot", 
+                    "boolean:true"
+                ]
+                subprocess.Popen(cmd,
+                                 stdout=subprocess.DEVNULL,
+                                 stderr=subprocess.DEVNULL)
+                
+                app_logger.info("Initiated hard reboot via dbus-send.")
                 return jsonify({'status': 'success', 'message': 'System is initiating a hard reboot.'}), 200
-            else:
-                app_logger.error(f"Failed to send hard reboot command via SSH. Error: {error_msg}")
-                return jsonify({'status': 'error', 'message': f'Failed to initiate hard reboot: {error_msg}'}), 500
+            except Exception as e:
+                app_logger.error(f"An unexpected error occurred while initiating hard reboot: {e}")
+                return jsonify({'status': 'error', 'message': f'An unexpected error occurred during hard reboot: {str(e)}'}), 500
         else:
             app_logger.warning(f"Invalid reboot type received: {reboot_type}")
             return jsonify({'status': 'error', 'message': f'Invalid reboot type specified: {reboot_type}. Must be "soft" or "hard".'}), 400
