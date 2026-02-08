@@ -101,21 +101,30 @@ def layout():
 
 @callback(
     [Output('log-project-selector', 'value'),
-     Output('log-subsystem-selector', 'value'),
-     Output('log-test-selector', 'value'),
-     Output('log-file-selector', 'value')],
+     Output('log-subsystem-selector', 'options', allow_duplicate=True),
+     Output('log-subsystem-selector', 'value', allow_duplicate=True),
+     Output('log-test-selector', 'options', allow_duplicate=True),
+     Output('log-test-selector', 'value', allow_duplicate=True),
+     Output('log-file-selector', 'options', allow_duplicate=True),
+     Output('log-file-selector', 'value', allow_duplicate=True)],
     Input('last-ingested-file', 'data'),
-    prevent_initial_call=True
+    prevent_initial_call='initial_duplicate'
 )
 def auto_select_full_context(last_ingest):
     if last_ingest and 'project_id' in last_ingest:
-        return (
-            last_ingest['project_id'],
-            last_ingest.get('subsystem', 'general'),
-            last_ingest.get('test', 'quick_dump'),
-            last_ingest['filename']
-        )
-    return dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        pid = last_ingest['project_id']
+        sub = last_ingest.get('subsystem', 'general')
+        test = last_ingest.get('test', 'quick_dump')
+        fname = last_ingest['filename']
+        
+        # Pre-load all options to ensure values are accepted
+        sub_opts = [{'label': s, 'value': s} for s in DataManager.list_subsystems(pid)]
+        test_opts = [{'label': t, 'value': t} for t in DataManager.list_tests(pid, sub)]
+        file_opts = [{'label': f, 'value': f} for f in DataManager.list_files(pid, sub, test)]
+        
+        return pid, sub_opts, sub, test_opts, test, file_opts, fname
+        
+    return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
 @callback(
     Output('log-subsystem-selector', 'options'),
