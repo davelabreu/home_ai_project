@@ -55,8 +55,8 @@ rebuild_non_ai_services() {
     # 1. Pull latest code
     git pull origin master
 
-    # 2. Get services, excluding ollama
-    local services_to_rebuild=$(docker compose ps --services | grep -v "ollama")
+    # 2. Get all services from the config, excluding ollama
+    local services_to_rebuild=$(docker compose config --services | grep -v "ollama")
     
     if [ -n "$services_to_rebuild" ]; then
         # 3. Use 'up' with '--build' on only those services
