@@ -14,11 +14,11 @@ To create a robust home automation and AI companion system, leveraging a Jetson 
 
 ## Hardware Components
 *   **Jetson (Always-On Companion):**
-    *   Hostname: [e.g., jetson-nano]
+    *   Hostname: [e.g., abrooski]
     *   IP Address: 192.168.1.11
     *   Purpose: Local QWEN model, home network management scripts, Wake-on-LAN initiator.
 *   **Main PC (Brain-Cruncher):**
-    *   Hostname: [e.g., gaming-pc]
+    *   Hostname: [e.g., abrooskiDeathStar]
     *   IP Address: [e.g., 192.168.1.10]
     *   MAC Address: [e.g., AA:BB:CC:DD:EE:FF]
     *   GPU: 5060ti

@@ -13,6 +13,7 @@ services:
     volumes:
       - /var/run/dbus:/var/run/dbus  # Connects container to host system bus
       - /var/run/docker.sock:/var/run/docker.sock # Allows container to interact with host Docker daemon
+      - /run/jtop.sock:/run/jtop.sock # Allows jtop library to communicate with host jtop service
       - /home/abrooski/.ssh/abrooski_jetson:/root/.ssh/abrooski_jetson:ro # Mount SSH private key
       - /usr/bin/tegrastats:/usr/bin/tegrastats # Adding tegrastats access
       - /sys:/sys
