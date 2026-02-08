@@ -5,6 +5,7 @@ interface NetworkDevice {
   ip: string;
   mac: string;
   interface: string;
+  name?: string;
 }
 
 interface DualNetworkStatus {

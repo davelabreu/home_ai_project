@@ -72,6 +72,19 @@ def serve_static_root_files(filename):
     """
     return send_from_directory(app.template_folder, filename)
 
+def load_device_names():
+    """Loads device names from a JSON file and ensures MACs are uppercase."""
+    names_path = os.path.join(basedir, 'device_names.json')
+    if os.path.exists(names_path):
+        try:
+            with open(names_path, 'r') as f:
+                data = json.load(f)
+                # Convert all keys to uppercase for consistent lookup
+                return {k.upper(): v for k, v in data.items()}
+        except Exception as e:
+            app_logger.error(f"Error loading device names: {e}")
+    return {}
+
 @app.route('/api/local_network_status')
 def get_local_network_status():
     """
@@ -79,6 +92,7 @@ def get_local_network_status():
     This function processes 'arp -a' command output to list connected devices.
     """
     devices = []
+    device_names = load_device_names()
     try:
         if sys.platform.startswith('win'):
             # Windows specific 'arp -a' command and parsing
@@ -102,8 +116,14 @@ def get_local_network_status():
             for line in output_lines:
                 match = arp_pattern_win.search(line)
                 if match:
-                    ip, mac, _type = match.groups()
-                    devices.append({'ip': ip, 'mac': mac.replace('-', ':'), 'interface': 'unknown (Windows)'}) # Interface retrieval is complex on Windows with `arp -a`; defaulting to 'unknown'.
+                    ip, mac_win, _type = match.groups()
+                    mac = mac_win.replace('-', ':').upper()
+                    devices.append({
+                        'ip': ip, 
+                        'mac': mac, 
+                        'interface': 'unknown (Windows)',
+                        'name': device_names.get(mac)
+                    })
         else: # Linux/Jetson specific logic
             result = subprocess.run(['arp', '-a'], capture_output=True, text=True, check=True)
             output_lines = result.stdout.splitlines()
@@ -115,7 +135,13 @@ def get_local_network_status():
                 match = arp_pattern_linux.search(line)
                 if match:
                     ip, mac, interface = match.groups()
-                    devices.append({'ip': ip, 'mac': mac, 'interface': interface})
+                    mac = mac.upper()
+                    devices.append({
+                        'ip': ip, 
+                        'mac': mac, 
+                        'interface': interface,
+                        'name': device_names.get(mac)
+                    })
             
             # Attempt to add the Jetson device's own IP and MAC address to the list.
             try:
@@ -131,8 +157,13 @@ def get_local_network_status():
                         break
                 
                 jetson_mac_result = subprocess.run(['cat', f'/sys/class/net/{primary_iface}/address'], capture_output=True, text=True, check=True)
-                jetson_mac = jetson_mac_result.stdout.strip()
-                devices.append({'ip': jetson_ip, 'mac': jetson_mac, 'interface': f'self (Jetson - {primary_iface})'})
+                jetson_mac = jetson_mac_result.stdout.strip().upper()
+                devices.append({
+                    'ip': jetson_ip, 
+                    'mac': jetson_mac, 
+                    'interface': f'self (Jetson - {primary_iface})',
+                    'name': device_names.get(jetson_mac, "Jetson Nano")
+                })
             except Exception as e:
                 app.logger.warning(f"Could not determine Jetson's own IP/MAC: {e}")
 

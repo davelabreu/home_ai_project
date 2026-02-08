@@ -29,7 +29,10 @@ const NetworkStatusCard: React.FC<NetworkStatusCardProps> = ({ title, networkSta
           {networkStatus.map((device, index) => (
             <div key={index} className="flex justify-between items-start border-b border-border/50 last:border-0 py-1.5">
               <div className="space-y-0.5">
-                <p className="text-xs font-semibold leading-none">{device.ip}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs font-semibold leading-none">{device.name || device.ip}</p>
+                  {device.name && <p className="text-[10px] text-muted-foreground italic">({device.ip})</p>}
+                </div>
                 <p className="text-[10px] text-muted-foreground font-mono">{device.mac}</p>
               </div>
               <p className="text-[10px] italic text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
