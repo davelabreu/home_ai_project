@@ -328,24 +328,23 @@ def command_reboot():
     else: # Running on non-Windows (Jetson)
         if reboot_type == 'soft':
             try:
-                # Sends a signal to the host systemd via the mounted D-Bus
-                # This is a graceful system reboot
-                cmd = [
-                    "dbus-send", "--system", "--print-reply", 
-                    "--dest=org.freedesktop.login1", 
-                    "/org/freedesktop/login1", 
-                    "org.freedesktop.login1.Manager.Reboot", 
-                    "boolean:true"
-                ]
-                subprocess.Popen(cmd,
+                # Command to restart the Docker container itself
+                # This assumes the container has access to the Docker daemon (e.g., /var/run/docker.sock is mounted)
+                container_name = os.environ.get('HOSTNAME') # Gets the container's hostname, often its name
+                if not container_name:
+                    app_logger.warning("Could not determine container name from HOSTNAME environment variable. Defaulting to 'home_ai_dashboard'.")
+                    container_name = "home_ai_dashboard"
+                
+                # Using subprocess.Popen for non-blocking execution, similar to dbus-send
+                subprocess.Popen(['docker', 'restart', container_name],
                                  stdout=subprocess.DEVNULL,
                                  stderr=subprocess.DEVNULL)
                 
-                app_logger.info("Initiated soft reboot via dbus-send.")
-                return jsonify({'status': 'success', 'message': 'System is initiating a soft reboot.'}), 200
+                app_logger.info(f"Initiated soft reboot (restart) of Docker container '{container_name}'.")
+                return jsonify({'status': 'success', 'message': f"Docker container '{container_name}' is initiating a restart."}), 200
             except Exception as e:
-                app_logger.error(f"An unexpected error occurred while initiating soft reboot: {e}")
-                return jsonify({'status': 'error', 'message': f'An unexpected error occurred during soft reboot: {str(e)}'}), 500
+                app_logger.error(f"An unexpected error occurred while initiating soft reboot of container: {e}")
+                return jsonify({'status': 'error', 'message': f'An unexpected error occurred during container soft reboot: {str(e)}'}), 500
         elif reboot_type == 'hard':
             app_logger.info("Attempting to initiate hard reboot via SSH.")
             command = "sudo shutdown -r now" # Command for hard reboot
