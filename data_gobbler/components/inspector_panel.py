@@ -1,8 +1,7 @@
 import dash
-from dash import html, dcc
+from dash import html, dcc, callback, callback_context, ALL, MATCH, Input, Output, State
 import dash_bootstrap_components as dbc
-
-from dash import callback, callback_context, ALL, MATCH
+import json
 
 def render_inspector_panel():
     return dbc.Offcanvas([
