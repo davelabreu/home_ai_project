@@ -35,10 +35,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
 
 # Copy the rest of the application code
-# Add a cache-busting RUN command to force the COPY . . to always execute
-# This command changes every time, invalidating the cache for subsequent layers.
-RUN /bin/bash -c "echo 'Cache Buster: $(date +%s)' > /tmp/cache_buster_file"
 COPY . .
+# Explicitly copy app.py last to ensure the latest version is always included
+COPY app.py /app/app.py
 
 # Expose the port that Flask will run on
 EXPOSE 5000
