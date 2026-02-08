@@ -209,10 +209,14 @@ def get_jetson_gpu_info():
     
     # Only execute tegrastats on Linux (Jetson)
     try:
+        app_logger.info("Executing tegrastats command...")
         # Run tegrastats for a short duration to get a single snapshot
         # --interval 100 gets 1 sample quickly. Removed --nosync as it's not supported.
-        result = subprocess.run(['tegrastats', '--interval', '100', '--logfile', '/dev/stdout'], 
-                                capture_output=True, text=True, check=True, timeout=2)
+        result = subprocess.run(['tegrastats', '--interval', '100', '--logfile', '/dev/stdout'],
+                                capture_output=True, text=True, check=True, timeout=5, stderr=subprocess.STDOUT) # Redirect stderr to stdout
+        app_logger.info(f"tegrastats result.stdout: '{result.stdout}'")
+        app_logger.info(f"tegrastats result.stderr: '{result.stderr}' (should be empty if redirected)")
+
         output_lines = result.stdout.strip().split('\n')
         
         # The last line of tegrastats output usually contains the most recent data
@@ -334,7 +338,7 @@ def command_reboot():
     data = request.json
     reboot_type = data.get('type', 'soft').lower() # Default to soft reboot
 
-    if sys.platform == 'win32':
+    if sys.platform.startswith('win'):
         app_logger.info(f"Running on Windows. Forwarding '{reboot_type}' reboot request to Jetson.")
         if not MONITOR_TARGET_HOST:
             return jsonify({'status': 'error', 'message': 'MONITOR_TARGET_HOST is not set for forwarding reboot request.'}), 400
