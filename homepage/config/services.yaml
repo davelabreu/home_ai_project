@@ -2,6 +2,7 @@
     - Ollama:
         icon: si-ollama
         href: http://192.168.1.11:11434
+        description: Local LLM Runner
         server: my-docker-host
         container: ollama_jetson
 
@@ -9,11 +10,19 @@
     - Web Monitor:
         icon: mdi-monitor-dashboard
         href: http://192.168.1.11:8050
+        description: Home AI Companion Dashboard
         server: my-docker-host
         container: home_ai_dashboard
+    - Data Analyzer:
+        icon: mdi-chart-bell-curve-cumulative
+        href: http://192.168.1.11:8051
+        description: CSV Analytics & Visualization
+        server: my-docker-host
+        container: data_analyzer
     - Netdata:
         icon: mdi-chart-line
         href: http://192.168.1.11:19999
+        description: Real-time System Telemetry
         server: my-docker-host
         container: netdata
 
@@ -22,3 +31,13 @@
         icon: mdi-microsoft-windows
         href: http://192.168.1.16:5000
         description: Brain-Crunching AI Host (Web Monitor)
+
+- Information:
+    - Jetson Stats:
+        icon: mdi-nvidia
+        href: http://192.168.1.11:8050/api/jetson_gpu_info
+        description: Raw JSON Hardware Metrics
+    - Project Repo:
+        icon: mdi-github
+        href: https://github.com/davelabreu/home_ai_project
+        description: Source Code & Documentation

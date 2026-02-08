@@ -72,6 +72,15 @@ services:
       - /etc/os-release:/host/etc/os-release:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
+  data_analyzer:
+    build:
+      context: .
+      dockerfile: ./data_analyzer/Dockerfile
+    container_name: data_analyzer
+    restart: always
+    ports:
+      - "8051:8050" # Map 8051 to internal 8050
+
   homepage:
     image: ghcr.io/gethomepage/homepage:latest
     container_name: homepage

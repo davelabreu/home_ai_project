@@ -1,3 +1,12 @@
+- greeting:
+    text: Welcome to the Home AI Command Center
+    help: false
+
+- datetime:
+    format:
+      dateStyle: long
+      timeStyle: short
+
 - search:
     provider: google
     focus: true
@@ -5,9 +14,12 @@
 - resources:
     cpu: true
     memory: true
+    disk: /
 
 - netdata:
     url: http://netdata:19999
     charts:
       - system.cpu
       - mem.available
+      - system.load
+      - system.io
