@@ -201,43 +201,29 @@ def get_local_network_scan():
         app_logger.error(f"Deep scan failed: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/remote_network_status')
+def get_remote_network_status():
+    if not MONITOR_TARGET_HOST:
+        return jsonify({'error': 'MONITOR_TARGET_HOST is not set.'}), 400
+    try:
+        remote_url = f"http://{MONITOR_TARGET_HOST}:{MONITOR_TARGET_PORT}/api/local_network_status"
+        response = requests.get(remote_url, timeout=5)
+        response.raise_for_status()
+        return jsonify(response.json())
+    except Exception as e:
+        return jsonify({'error': f"Remote error: {e}"}), 500
+
 @app.route('/api/remote_network_scan')
 def get_remote_network_scan():
     if not MONITOR_TARGET_HOST:
-        return jsonify({'error': 'Not configured'}), 400
+        return jsonify({'error': 'MONITOR_TARGET_HOST is not set.'}), 400
     try:
-        response = requests.get(f"http://{MONITOR_TARGET_HOST}:{MONITOR_TARGET_PORT}/api/local_network_scan", timeout=20)
+        remote_url = f"http://{MONITOR_TARGET_HOST}:{MONITOR_TARGET_PORT}/api/local_network_scan"
+        response = requests.get(remote_url, timeout=20)
+        response.raise_for_status()
         return jsonify(response.json())
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
-    except subprocess.CalledProcessError as e:
-        return jsonify({'error': f"Command failed: {e.cmd} - {e.stderr}"}), 500
-    except FileNotFoundError:
-        return jsonify({'error': "'arp' command not found. Is it installed and in PATH?"}), 500
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/remote_network_status')
-def get_remote_network_status():
-    """
-    Fetches network status information from a remote host specified by MONITOR_TARGET_HOST.
-    This endpoint is active only if MONITOR_TARGET_HOST environment variable is set.
-    It expects the remote host to be running a compatible web_monitor Flask application
-    that exposes a /api/local_network_status endpoint.
-    """
-    if not MONITOR_TARGET_HOST:
-        return jsonify({'error': 'MONITOR_TARGET_HOST is not set for remote network status.'}), 400
-    
-    try:
-        # Construct the URL for the remote API endpoint
-        remote_url = f"http://{MONITOR_TARGET_HOST}:{MONITOR_TARGET_PORT}/api/local_network_status"
-        app.logger.info(f"Fetching remote network status from: {remote_url}")
-        response = requests.get(remote_url)
-        response.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
-        return jsonify(response.json())
-    except requests.exceptions.RequestException as e:
-        app.logger.error(f"Error fetching remote network status from {MONITOR_TARGET_HOST}: {e}")
-        return jsonify({'error': f"Could not connect to remote host {MONITOR_TARGET_HOST} for network status: {e}"}), 500
+        return jsonify({'error': f"Remote error: {e}"}), 500
 
 @app.route('/api/local_system_info')
 def get_local_system_info():

@@ -35,21 +35,23 @@ export const useNetworkStatus = () => {
         const res = await fetch('/api/local_network_status');
         const data = await res.json();
         if (!data.error) setStatus(prev => ({ ...prev, local: { devices: data, error: null, loading: false } }));
+        else setStatus(prev => ({ ...prev, local: { ...prev.local, error: data.error, loading: false } }));
       } catch (e: any) {
         setStatus(prev => ({ ...prev, local: { ...prev.local, error: e.message, loading: false } }));
       }
 
-      // Remote Fast
-      if (monitor_target_host_set && monitorTargetHost && monitorTargetPort) {
+      // Remote Fast (Via Proxy)
+      if (monitor_target_host_set) {
         try {
-          const res = await fetch(`http://${monitorTargetHost}:${monitorTargetPort}/api/local_network_status`);
+          const res = await fetch('/api/remote_network_status');
           const data = await res.json();
           if (!data.error) setStatus(prev => ({ ...prev, remote: { devices: data, error: null, loading: false } }));
+          else setStatus(prev => ({ ...prev, remote: { ...prev.remote, error: data.error, loading: false } }));
         } catch (e: any) {
           setStatus(prev => ({ ...prev, remote: { ...prev.remote, error: e.message, loading: false } }));
         }
       } else {
-        setStatus(prev => ({ ...prev, remote: { devices: [], error: "Not configured", loading: false } }));
+        setStatus(prev => ({ ...prev, remote: { devices: [], error: null, loading: false } }));
       }
     };
 
@@ -57,7 +59,7 @@ export const useNetworkStatus = () => {
       const mergeDevices = (prev: NetworkDevice[], deep: NetworkDevice[]) => {
         const merged = [...prev];
         deep.forEach(d => {
-          const idx = merged.findIndex(m => m.mac === d.mac || m.ip === d.ip);
+          const idx = merged.findIndex(m => m.mac === d.mac || (m.ip === d.ip && m.mac === 'UNKNOWN'));
           if (idx !== -1) {
             merged[idx] = { ...merged[idx], ...d, interface: merged[idx].interface === 'arp cache' ? d.interface : merged[idx].interface };
           } else {
@@ -76,10 +78,10 @@ export const useNetworkStatus = () => {
         }
       } catch (e) { /* ignore deep errors */ }
 
-      // Remote Deep
-      if (monitor_target_host_set && monitorTargetHost && monitorTargetPort) {
+      // Remote Deep (Via Proxy)
+      if (monitor_target_host_set) {
         try {
-          const res = await fetch(`http://${monitorTargetHost}:${monitorTargetPort}/api/local_network_scan`);
+          const res = await fetch('/api/remote_network_scan');
           const data = await res.json();
           if (Array.isArray(data)) {
             setStatus(prev => ({ ...prev, remote: { ...prev.remote, devices: mergeDevices(prev.remote.devices, data) } }));
@@ -88,9 +90,10 @@ export const useNetworkStatus = () => {
       }
     };
 
-    const run = async () => {
-      await fetchFastStatus();
-      await fetchDeepScan();
+    const run = () => {
+      // Fire both concurrently - DO NOT await fetchFastStatus before fetchDeepScan
+      fetchFastStatus();
+      fetchDeepScan();
     };
 
     run();
