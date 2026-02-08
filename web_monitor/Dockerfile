@@ -37,6 +37,7 @@ COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
 # Explicitly copy application files that can change
 COPY app.py .
 COPY templates /app/templates
+COPY scripts /app/scripts
 
 # Expose the port that Flask will run on
 EXPOSE 5000
