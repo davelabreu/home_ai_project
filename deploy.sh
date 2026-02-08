@@ -24,9 +24,37 @@ prime_model() {
     docker exec ollama_jetson ollama ps
 }
 
-# --- Menu Logic ---
+# --- Sub-Menu: Individual Containers ---
+reboot_container_menu() {
+    local PS3='Select a container to restart (or Back): '
+    # Auto-discover running containers from your project
+    local containers=($(docker compose ps --services))
+    containers+=("Back")
+
+    select container in "${containers[@]}"
+    do
+        case $container in
+            "Back")
+                return # Go back to main menu
+                ;;
+            *)
+                if [[ -n "$container" ]]; then
+                    echo "--- 🔄 Restarting $container ---"
+                    docker compose restart "$container"
+                    # Prime specifically if it's the ollama service
+                    [[ "$container" == *"ollama"* ]] && prime_model
+                    return
+                else
+                    echo "Invalid selection."
+                fi
+                ;;
+        esac
+    done
+}
+
+# --- Main Menu Logic ---
 PS3='Choose a deployment action: '
-options=("Full System Reset (The Works)" "Update Dashboard Only" "Restart/Prime Ollama Only" "Quit")
+options=("Full System Reset (The Works)" "Update Dashboard Only" "Restart Individual Container" "Restart/Prime Ollama Only" "Quit")
 
 select opt in "${options[@]}"
 do
@@ -43,6 +71,10 @@ do
             git pull origin master
             docker compose up -d --build dashboard
             echo "--- ✅ Dashboard Updated ---"
+            break
+            ;;
+        "Restart Individual Container")
+            reboot_container_menu # Call the sub-menu function
             break
             ;;
         "Restart/Prime Ollama Only")
