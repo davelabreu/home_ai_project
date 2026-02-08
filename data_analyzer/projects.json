@@ -1,0 +1,14 @@
+{
+    "home_jetson": {
+        "name": "🏠 Home Jetson Stats",
+        "description": "Real-time and historical hardware metrics from the local Jetson Nano.",
+        "template": "hardware_telemetry",
+        "data_dir": "projects/home_jetson"
+    },
+    "work_logs": {
+        "name": "💼 Work Log Analysis",
+        "description": "Ingestion and visualization of professional log files and CSVs.",
+        "template": "log_generic",
+        "data_dir": "projects/work_logs"
+    }
+}
