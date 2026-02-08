@@ -54,13 +54,13 @@ def render_ingest_wizard():
 
 # --- Callbacks for the Wizard ---
 
-@callback(
     [Output("ingest-wizard-modal", "is_open"),
      Output("wizard-preview-area", "children"),
      Output("wizard-submit", "disabled"),
      Output("wizard-file-info", "children"),
      Output("url", "pathname"),
-     Output("wizard-project-info", "children")],
+     Output("wizard-project-info", "children"),
+     Output("last-ingested-file", "data")],
     [Input("wizard-trigger-store", "data"),
      Input("wizard-cancel", "n_clicks"),
      Input("wizard-submit", "n_clicks"),
@@ -73,7 +73,7 @@ def render_ingest_wizard():
 def handle_wizard_logic(trigger_signal, n_cancel, n_submit, contents, project_id, is_open, filename):
     ctx = dash.callback_context
     if not ctx.triggered:
-        return is_open, dash.no_update, True, "", dash.no_update, ""
+        return is_open, dash.no_update, True, "", dash.no_update, "", dash.no_update
     
     trigger = ctx.triggered[0]['prop_id']
     projects = DataManager.get_projects()
@@ -86,10 +86,10 @@ def handle_wizard_logic(trigger_signal, n_cancel, n_submit, contents, project_id
 
     # 1. Open/Close Logic
     if "wizard-trigger-store" in trigger and (trigger_signal and trigger_signal > 0):
-        return True, "", True, "", dash.no_update, ""
+        return True, "", True, "", dash.no_update, "", dash.no_update
 
     if "wizard-cancel" in trigger:
-        return False, "", True, "", dash.no_update, ""
+        return False, "", True, "", dash.no_update, "", dash.no_update
 
     # 2. Submission Logic (The actual 'Gobbling')
     if "wizard-submit" in trigger and contents and project_id:
@@ -107,10 +107,11 @@ def handle_wizard_logic(trigger_signal, n_cancel, n_submit, contents, project_id
             # Save to Silo
             new_filename = DataManager.save_dataframe(df, project_id, prefix="ingest")
             
-            # Close modal and redirect to work-logs
-            return False, dash.no_update, True, "", "/work-logs", ""
+            # Record the last ingested file and redirect
+            ingest_record = {'project_id': project_id, 'filename': new_filename}
+            return False, dash.no_update, True, "", "/work-logs", "", ingest_record
         except Exception as e:
-            return True, dbc.Alert(f"❌ Ingestion Failed: {e}", color="danger"), False, filename, dash.no_update, project_info
+            return True, dbc.Alert(f"❌ Ingestion Failed: {e}", color="danger"), False, filename, dash.no_update, project_info, dash.no_update
 
     # 3. Preview/Verification Logic
     if contents and project_id:

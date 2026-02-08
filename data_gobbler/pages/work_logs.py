@@ -14,6 +14,13 @@ def layout():
     log_projects = {pid: info for pid, info in projects.items() if info['type'] in ['logs', 'encoder_analysis']}
     
     return dbc.Container([
+        # 0. IDENTIFIER
+        dbc.Row([
+            dbc.Col([
+                dbc.Badge([html.I(className="bi bi-eye-fill me-2"), "LIVE DATA VIEW"], color="success", className="mb-2 p-2 px-3 shadow-sm")
+            ], width=12)
+        ]),
+
         # 1. TOP BAR (Global Controls)
         dbc.Row([
             dbc.Col([
@@ -70,7 +77,19 @@ def layout():
 
     ], fluid=True)
 
-# --- Callbacks ---
+@callback(
+    [Output('log-project-selector', 'value'),
+     Output('log-file-selector', 'value')],
+    Input('url', 'pathname'),
+    State('last-ingested-file', 'data'),
+    prevent_initial_call=False
+)
+def auto_select_ingested_file(pathname, last_ingest):
+    if pathname == '/work-logs' and last_ingest and 'project_id' in last_ingest:
+        return last_ingest['project_id'], last_ingest['filename']
+    return dash.no_update, dash.no_update
+
+# --- Existing Callbacks ---
 
 @callback(
     Output('log-file-selector', 'options'),

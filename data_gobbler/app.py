@@ -71,6 +71,7 @@ sidebar = html.Div(
 app.layout = html.Div([
     dcc.Location(id='url', refresh=True),
     dcc.Store(id='wizard-trigger-store', data=0), 
+    dcc.Store(id='last-ingested-file', data={}, storage_type='session'), # Track recent upload
     sidebar,
     html.Div(dash.page_container, style=CONTENT_STYLE),
     render_ingest_wizard(),
