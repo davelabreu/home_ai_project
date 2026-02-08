@@ -39,7 +39,7 @@ CONTENT_STYLE = {
 
 sidebar = html.Div(
     [
-        html.H2("GOBBLER", className="display-6 fw-bold text-success mb-4"),
+        html.H2("Data GOBBLER", className="display-6 fw-bold text-success mb-4"),
         html.Hr(style={"border-top": "1px solid #444"}),
         html.P("ENGINEERING WORKBENCH", className="text-muted small fw-bold"),
         dbc.Nav(
