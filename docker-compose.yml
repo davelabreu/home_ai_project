@@ -10,6 +10,8 @@ services:
     restart: always
     ports:
       - "8050:5000" # Maps Jetson 8050 -> Container 5000
+    volumes:
+      - /var/run/dbus:/var/run/dbus  # Connects container to host system bus
     runtime: nvidia
     deploy:
       resources:
