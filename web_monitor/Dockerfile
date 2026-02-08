@@ -34,10 +34,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy built frontend from frontend-builder stage
 COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
 
-# Copy the rest of the application code
-COPY . .
-# Explicitly copy app.py last to ensure the latest version is always included
-COPY app.py /app/app.py
+# Explicitly copy application files that can change
+COPY app.py .
+COPY templates /app/templates
 
 # Expose the port that Flask will run on
 EXPOSE 5000
