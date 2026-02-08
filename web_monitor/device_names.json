@@ -1,6 +1,10 @@
 {
-  "00:00:00:00:00:00": "Example Device (Replace with real MAC)",
-  "AA:BB:CC:DD:EE:FF": "Dave's Phone",
-  "11:22:33:44:55:66": "Living Room Nest",
-  "77:88:99:AA:BB:CC": "Sonos Speaker"
+  "94:18:65:18:8C:63": "Router/Gateway",
+  "78:28:CA:EF:FE:E2": "Sonos Speaker",
+  "F0:F6:C1:7C:F8:C4": "Sonos Speaker",
+  "54:2A:1B:4E:5D:C8": "Sonos Speaker",
+  "CC:A7:C1:2F:DB:F6": "Google Device",
+  "08:BF:B8:18:E7:6E": "Main PC",
+  "9E:97:97:F4:21:06": "Unknown Device",
+  "64:07:F6:93:71:32": "Unknown Device"
 }

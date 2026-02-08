@@ -85,6 +85,16 @@ def load_device_names():
             app_logger.error(f"Error loading device names: {e}")
     return {}
 
+import socket # Import socket for hostname resolution
+
+def resolve_hostname(ip):
+    """Attempts to resolve an IP address to a hostname."""
+    try:
+        # gethostbyaddr returns a triple (hostname, aliaslist, ipaddrlist)
+        return socket.gethostbyaddr(ip)[0]
+    except (socket.herror, socket.gaierror, socket.timeout):
+        return None
+
 @app.route('/api/local_network_status')
 def get_local_network_status():
     """
@@ -96,21 +106,9 @@ def get_local_network_status():
     try:
         if sys.platform.startswith('win'):
             # Windows specific 'arp -a' command and parsing
-            # On Windows, 'arp -a' output format is different.
-            # Example:
-            #   Interface: 192.168.1.10 --- 0x1
-            #     Internet Address      Physical Address      Type
-            #     192.168.1.1           00-11-22-33-44-55     dynamic
-            #     192.168.1.100         AA-BB-CC-DD-EE-FF     static
-            
             result = subprocess.run(['arp', '-a'], capture_output=True, text=True, check=True)
             output_lines = result.stdout.splitlines()
 
-            # Regex for Windows arp -a output: IP Address, MAC Address, Type
-            # IP: (\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})
-            # MAC: ([0-9a-fA-F]{2}-[0-9a-fA-F]{2}-[0-9a-fA-F]{2}-[0-9a-fA-F]{2}-[0-9a-fA-F]{2}-[0-9a-fA-F]{2})
-            # Type: (dynamic|static)
-            # Need to handle potential leading/trailing spaces and the structure.
             arp_pattern_win = re.compile(r'\s*(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s*([0-9a-fA-F]{2}-[0-9a-fA-F]{2}-[0-9a-fA-F]{2}-[0-9a-fA-F]{2}-[0-9a-fA-F]{2}-[0-9a-fA-F]{2})\s*(dynamic|static)')
 
             for line in output_lines:
@@ -118,30 +116,88 @@ def get_local_network_status():
                 if match:
                     ip, mac_win, _type = match.groups()
                     mac = mac_win.replace('-', ':').upper()
+                    
+                    # Try to get name from: 1. Manual Mapping, 2. Reverse DNS
+                    name = device_names.get(mac)
+                    if not name:
+                        name = resolve_hostname(ip)
+                    
                     devices.append({
                         'ip': ip, 
                         'mac': mac, 
                         'interface': 'unknown (Windows)',
-                        'name': device_names.get(mac)
+                        'name': name
                     })
         else: # Linux/Jetson specific logic
-            result = subprocess.run(['arp', '-a'], capture_output=True, text=True, check=True)
-            output_lines = result.stdout.splitlines()
-
-            # Regex to parse 'arp -a' output on Linux: '? (IP_ADDRESS) at MAC_ADDRESS [ether] on INTERFACE'
-            arp_pattern_linux = re.compile(r'\? \((\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\) at ([0-9a-fA-F:]+) \[ether\] on (\w+)')
-
-            for line in output_lines:
-                match = arp_pattern_linux.search(line)
-                if match:
-                    ip, mac, interface = match.groups()
+            try:
+                # Try to use nmap for a more detailed scan if available
+                # We'll use a local network range, ideally detected but 192.168.1.0/24 is common
+                # To be safer, we can try to find the network range first
+                result = subprocess.run(['nmap', '-sn', '192.168.1.0/24'], capture_output=True, text=True, timeout=10)
+                nmap_output = result.stdout
+                
+                # Parse nmap output
+                # Example:
+                # Nmap scan report for _gateway (192.168.1.1)
+                # Host is up (0.00046s latency).
+                # MAC Address: 94:18:65:18:8C:63 (Unknown)
+                
+                # Regex to match Nmap output blocks
+                # Needs to handle both cases: with hostname and without
+                # Nmap scan report for ([^(\s]+)?\s*\(?(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\)?
+                # MAC Address: ([0-9a-fA-F:]+) \(([^)]+)\)
+                
+                nmap_pattern = re.compile(r'Nmap scan report for ([^(\s]+)?\s*\(?(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\)?.*?MAC Address: ([0-9a-fA-F:]+) \(([^)]+)\)', re.DOTALL)
+                
+                matches = nmap_pattern.findall(nmap_output)
+                for hostname, ip, mac, vendor in matches:
                     mac = mac.upper()
+                    name = device_names.get(mac)
+                    if not name:
+                        if hostname and hostname != '_gateway':
+                            name = hostname
+                        elif vendor and vendor != 'Unknown':
+                            name = vendor
+                    
                     devices.append({
-                        'ip': ip, 
-                        'mac': mac, 
-                        'interface': interface,
-                        'name': device_names.get(mac)
+                        'ip': ip,
+                        'mac': mac,
+                        'interface': 'nmap scan',
+                        'name': name
                     })
+                
+                if not devices: # If nmap found nothing or failed to parse, fall back
+                    raise Exception("Nmap output empty or unparseable")
+
+            except (subprocess.CalledProcessError, FileNotFoundError, Exception) as e:
+                app.logger.info(f"Nmap scan failed or not available, falling back to arp: {e}")
+                result = subprocess.run(['arp', '-a'], capture_output=True, text=True, check=True)
+                output_lines = result.stdout.splitlines()
+
+                # Regex to parse 'arp -a' output on Linux: '? (IP_ADDRESS) at MAC_ADDRESS [ether] on INTERFACE'
+                # Also handles names if present: 'name (IP_ADDRESS) at MAC_ADDRESS [ether] on INTERFACE'
+                arp_pattern_linux = re.compile(r'(\S+) \((\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\) at ([0-9a-fA-F:]+) \[ether\] on (\w+)')
+
+                for line in output_lines:
+                    match = arp_pattern_linux.search(line)
+                    if match:
+                        hostname, ip, mac, interface = match.groups()
+                        mac = mac.upper()
+                        
+                        # Use manual mapping first, then arp-reported name if it's not '?'
+                        name = device_names.get(mac)
+                        if not name and hostname != '?':
+                            name = hostname
+                        
+                        if not name:
+                            name = resolve_hostname(ip)
+
+                        devices.append({
+                            'ip': ip, 
+                            'mac': mac, 
+                            'interface': interface,
+                            'name': name
+                        })
             
             # Attempt to add the Jetson device's own IP and MAC address to the list.
             try:
@@ -158,11 +214,14 @@ def get_local_network_status():
                 
                 jetson_mac_result = subprocess.run(['cat', f'/sys/class/net/{primary_iface}/address'], capture_output=True, text=True, check=True)
                 jetson_mac = jetson_mac_result.stdout.strip().upper()
+                
+                name = device_names.get(jetson_mac, "Jetson Nano")
+                
                 devices.append({
                     'ip': jetson_ip, 
                     'mac': jetson_mac, 
                     'interface': f'self (Jetson - {primary_iface})',
-                    'name': device_names.get(jetson_mac, "Jetson Nano")
+                    'name': name
                 })
             except Exception as e:
                 app.logger.warning(f"Could not determine Jetson's own IP/MAC: {e}")
