@@ -118,7 +118,7 @@ def get_local_network_status():
                         'ip': ip, 
                         'mac': mac, 
                         'interface': 'arp cache',
-                        'name': device_names.get(mac) or resolve_hostname(ip)
+                        'name': device_names.get(mac) # Removed slow resolve_hostname
                     })
         else: # Linux/Jetson
             result = subprocess.run(['arp', '-a'], capture_output=True, text=True, check=True)
@@ -138,7 +138,7 @@ def get_local_network_status():
                         'ip': ip, 
                         'mac': mac, 
                         'interface': interface,
-                        'name': name or resolve_hostname(ip)
+                        'name': name # Removed slow resolve_hostname
                     })
             
             # Add self
@@ -162,22 +162,34 @@ def get_local_network_status():
 @app.route('/api/local_network_scan')
 def get_local_network_scan():
     """
-    Performs a deeper network scan using nmap. This is slow but provides
-    richer info like vendor names and better hostnames.
+    Performs a deeper network scan using nmap or reverse DNS.
     """
-    if sys.platform.startswith('win'):
-        # On Windows, we'll just stick to what we have or return empty for now
-        # as nmap isn't standard.
-        return jsonify([])
-
     devices = []
     device_names = load_device_names()
+
+    if sys.platform.startswith('win'):
+        # On Windows, try reverse DNS for items in ARP cache as a "deep scan"
+        try:
+            result = subprocess.run(['arp', '-a'], capture_output=True, text=True, check=True)
+            output_lines = result.stdout.splitlines()
+            arp_pattern_win = re.compile(r'\s*(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s*([0-9a-fA-F]{2}-[0-9a-fA-F]{2}-[0-9a-fA-F]{2}-[0-9a-fA-F]{2}-[0-9a-fA-F]{2}-[0-9a-fA-F]{2})')
+
+            for line in output_lines:
+                match = arp_pattern_win.search(line)
+                if match:
+                    ip, mac_win = match.groups()
+                    mac = mac_win.replace('-', ':').upper()
+                    name = device_names.get(mac) or resolve_hostname(ip)
+                    if name:
+                        devices.append({'ip': ip, 'mac': mac, 'name': name, 'interface': 'dns lookup'})
+            return jsonify(devices)
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    # Linux/Jetson Nmap Scan
     try:
-        # Ping scan the local subnet
         result = subprocess.run(['nmap', '-sn', '192.168.1.0/24'], capture_output=True, text=True, timeout=15)
         nmap_output = result.stdout
-        
-        # Parse: Nmap scan report for [hostname] ([IP]) ... MAC Address: [MAC] ([Vendor])
         nmap_pattern = re.compile(r'Nmap scan report for ([^(\s]+)?\s*\(?(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\)?.*?MAC Address: ([0-9a-fA-F:]+) \(([^)]+)\)', re.DOTALL)
         
         matches = nmap_pattern.findall(nmap_output)
