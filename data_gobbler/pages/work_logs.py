@@ -82,16 +82,28 @@ def update_file_dropdown(project_id):
     files = DataManager.list_files(project_id)
     return [{'label': f, 'value': f} for f in files]
 
+# Callback 1: Update Metadata (Static ID)
 @callback(
-    [Output({'type': 'plot-graph', 'index': MATCH}, 'figure'),
-     Output('log-file-metadata', 'children')],
+    Output('log-file-metadata', 'children'),
+    [Input('log-file-selector', 'value')],
+    [State('log-project-selector', 'value')]
+)
+def update_metadata(filename, project_id):
+    if not filename or not project_id:
+        return "No file selected."
+    df = DataManager.load_dataframe(project_id, filename)
+    return f"Records: {len(df)} | Cols: {len(df.columns)}"
+
+# Callback 2: Update Individual Plots (MATCH Wildcard)
+@callback(
+    Output({'type': 'plot-graph', 'index': MATCH}, 'figure'),
     [Input('log-file-selector', 'value')],
     [State('log-project-selector', 'value'),
      State({'type': 'plot-graph', 'index': MATCH}, 'id')]
 )
 def update_plots(filename, project_id, plot_id_obj):
     if not filename or not project_id:
-        return dash.no_update, "No file selected."
+        return dash.no_update
     
     df = DataManager.load_dataframe(project_id, filename)
     projects = DataManager.get_projects()
@@ -102,7 +114,6 @@ def update_plots(filename, project_id, plot_id_obj):
         fig = PlotTemplates.encoder_analysis_v6(df, title=f"Encoder Analysis")
     else:
         import plotly.express as px
-        fig = px.line(df, x=df.columns[0], y=df.columns[1:], title="Generic Line Plot")
+        fig = px.line(df, x=df.columns[0], y=df.columns[1:], title="Generic Line Plot", template="plotly")
     
-    metadata = f"Records: {len(df)} | Cols: {len(df.columns)}"
-    return fig, metadata
+    return fig
