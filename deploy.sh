@@ -85,6 +85,7 @@ do
             break
             ;;
         "Restart All EXCEPT Ollama")
+            git pull origin master
             restart_non_ai_services
             break
             ;;
