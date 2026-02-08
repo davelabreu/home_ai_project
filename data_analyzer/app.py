@@ -20,10 +20,13 @@ app = dash.Dash(__name__, suppress_callback_exceptions=True)
 server = app.server
 
 app.layout = html.Div([
+    # Signal for background updates
+    dcc.Store(id='data-update-signal', data=0),
+    
     # Header
     html.Div([
         html.H1("AI Workbench | Data Analyzer", style={'margin': '0', 'color': 'white'}),
-        html.P("v0.2.0 - Project-based Analytics Workbench", style={'margin': '0', 'color': '#ccc'})
+        html.P("v0.2.1 - Project-based Analytics Workbench", style={'margin': '0', 'color': '#ccc'})
     ], style={'padding': '20px', 'backgroundColor': '#1e1e1e', 'borderBottom': '2px solid #333'}),
 
     html.Div([
@@ -45,20 +48,21 @@ app.layout = html.Div([
 
         # Main Content
         html.Div([
-            html.Div(id='project-content')
+            html.Div(id='project-controls'),
+            html.Hr(),
+            html.Div(id='shared-display-area', style={'marginTop': '20px'})
         ], style={'width': '75%', 'padding': '20px', 'float': 'left'})
     ])
 ])
 
-# Sidebar: Update Metadata and Library List
+# 1. Sidebar Metadata & Library Refresh
 @app.callback(
     [Output('project-metadata', 'children'),
      Output('data-library-list', 'children')],
     [Input('project-selector', 'value'),
-     Input('home-stats-display', 'children'), # Refresh when new data fetched
-     Input('log-analysis-display', 'children')] # Refresh when new log uploaded
+     Input('data-update-signal', 'data')]
 )
-def update_sidebar(project_id, _n1, _n2):
+def update_sidebar(project_id, _signal):
     project = PROJECTS[project_id]
     metadata = html.Div([
         html.P(project['description']),
@@ -71,25 +75,28 @@ def update_sidebar(project_id, _n1, _n2):
     if not files:
         library = html.P("No files found.", style={'fontStyle': 'italic'})
     else:
-        library = html.Ul([
-            html.Li(f, style={'cursor': 'pointer', 'color': '#0066cc', 'marginBottom': '5px'}) 
-            for f in files[:10] # Show last 10
-        ], style={'paddingLeft': '15px'})
+        # Create clickable items for each file
+        library = html.Div([
+            html.Div([
+                html.A(f, id={'type': 'library-file', 'index': f}, 
+                       style={'cursor': 'pointer', 'color': '#0066cc', 'display': 'block', 'marginBottom': '5px', 'textDecoration': 'underline'})
+            ]) for f in files[:15]
+        ])
         
     return metadata, library
 
-# Main Content: Render based on Project
+# 2. Main Content Controls (Static IDs)
 @app.callback(
-    Output('project-content', 'children'),
+    Output('project-controls', 'children'),
     Input('project-selector', 'value')
 )
-def render_project_content(project_id):
+def render_project_controls(project_id):
     project = PROJECTS[project_id]
     if project_id == 'home_jetson':
         return html.Div([
             html.H2(project['name']),
-            html.Button("Fetch Latest from Netdata", id='fetch-netdata-btn', className='btn-primary', style={'padding': '10px 20px', 'backgroundColor': '#007bff', 'color': 'white', 'border': 'none', 'borderRadius': '4px', 'cursor': 'pointer'}),
-            html.Div(id='home-stats-display', style={'marginTop': '20px'})
+            html.Button("Fetch Latest from Netdata", id='fetch-netdata-btn', 
+                        style={'padding': '10px 20px', 'backgroundColor': '#007bff', 'color': 'white', 'border': 'none', 'borderRadius': '4px', 'cursor': 'pointer'}),
         ])
     else:
         return html.Div([
@@ -102,10 +109,80 @@ def render_project_content(project_id):
                     'borderWidth': '2px', 'borderStyle': 'dashed', 'borderRadius': '10px',
                     'textAlign': 'center', 'backgroundColor': '#f8f9fa'
                 }
-            ),
-            html.Div(id='log-analysis-display', style={'marginTop': '20px'})
+            )
         ])
 
+# 3. Centralized Data Processing & Display
+@app.callback(
+    [Output('shared-display-area', 'children'),
+     Output('data-update-signal', 'data')],
+    [Input('fetch-netdata-btn', 'n_clicks'),
+     Input('upload-logs', 'contents'),
+     Input({'type': 'library-file', 'index': dash.ALL}, 'n_clicks'),
+     Input('project-selector', 'value')],
+    [State('upload-logs', 'filename'),
+     State('data-update-signal', 'data')],
+    prevent_initial_call=False
+)
+def handle_data_actions(n_fetch, upload_contents, n_library_clicks, project_id, upload_filename, current_signal):
+    ctx = callback_context
+    if not ctx.triggered:
+        # Initial Load: Load latest file for project
+        project_dir = ensure_project_dir(project_id)
+        files = sorted([f for f in os.listdir(project_dir) if f.endswith('.csv')], reverse=True)
+        if files:
+            df = pd.read_csv(os.path.join(project_dir, files[0]))
+            return render_data_summary(df, f"Restored latest: {files[0]}"), current_signal
+        return html.P("No data active. Use controls above or library on left."), current_signal
+
+    trigger_id = ctx.triggered[0]['prop_id']
+
+    # ACTION: Fetch from Netdata
+    if 'fetch-netdata-btn' in trigger_id:
+        try:
+            chart_map = {'system.cpu': 'CPU', 'mem.available': 'RAM', 'system.load': 'Load', 'cpu.cpufreq': 'Freq'}
+            all_data = []
+            for cid, lbl in chart_map.items():
+                res = requests.get(f"http://netdata:19999/api/v1/data?chart={cid}&after=-3600&format=json", timeout=3)
+                if res.status_code == 200:
+                    js = res.json()
+                    tmp = pd.DataFrame(js['data'], columns=['time'] + [f"{lbl} ({l})" for l in js['labels'][1:]])
+                    tmp['time'] = pd.to_datetime(tmp['time'], unit='s')
+                    all_data.append(tmp.set_index('time'))
+            
+            df = pd.concat(all_data, axis=1).sort_index().reset_index()
+            save_path = os.path.join(ensure_project_dir('home_jetson'), f"netdata_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
+            df.to_csv(save_path, index=False)
+            return render_data_summary(df, "Fetched new data from Netdata"), current_signal + 1
+        except Exception as e:
+            return html.Div(f"Netdata Error: {e}", style={'color': 'red'}), current_signal
+
+    # ACTION: Upload File
+    elif 'upload-logs' in trigger_id and upload_contents:
+        content_type, content_string = upload_contents.split(',')
+        df = pd.read_csv(io.StringIO(base64.b64decode(content_string).decode('utf-8')))
+        save_path = os.path.join(ensure_project_dir(project_id), f"ingested_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
+        df.to_csv(save_path, index=False)
+        return render_data_summary(df, f"Ingested {upload_filename}"), current_signal + 1
+
+    # ACTION: Load from Library
+    elif 'library-file' in trigger_id:
+        # Extract filename from JSON trigger string
+        file_json = json.loads(trigger_id.split('.')[0])
+        filename = file_json['index']
+        df = pd.read_csv(os.path.join(ensure_project_dir(project_id), filename))
+        return render_data_summary(df, f"Loaded from library: {filename}"), current_signal
+
+    # ACTION: Switch Project
+    elif 'project-selector' in trigger_id:
+        project_dir = ensure_project_dir(project_id)
+        files = sorted([f for f in os.listdir(project_dir) if f.endswith('.csv')], reverse=True)
+        if files:
+            df = pd.read_csv(os.path.join(project_dir, files[0]))
+            return render_data_summary(df, f"Switched to {project_id} (Latest data loaded)"), current_signal
+        return html.P("Project empty. Ingest data to begin."), current_signal
+
+    return dash.no_update, current_signal
 import requests # Import requests for Netdata API
 
 # --- Helper to ensure directories exist ---
