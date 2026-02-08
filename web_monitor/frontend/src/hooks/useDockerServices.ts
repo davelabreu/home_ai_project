@@ -34,18 +34,28 @@ export const useDockerServices = () => {
   };
 
   const restartService = async (name: string) => {
+    // Optimistic UI could go here, but for now we handle the self-restart case
     try {
       const baseUrl = monitor_target_host_set 
         ? `http://${monitorTargetHost}:${monitorTargetPort}` 
         : '';
+      
       const response = await fetch(`${baseUrl}/api/docker_services/restart`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name }),
       });
+      
       if (!response.ok) throw new Error('Failed to restart service');
       fetchServices(); // Refresh after restart
     } catch (err: any) {
+      // Special case: If we restarted the dashboard itself, the fetch will fail
+      // because the server shut down before sending a response or the connection was severed.
+      if (name.includes('dashboard') || name.includes('web_monitor')) {
+        console.log("Self-restart initiated, ignoring fetch error.");
+        alert("Dashboard is restarting... please wait a few seconds for it to come back online.");
+        return;
+      }
       alert(`Restart failed: ${err.message}`);
     }
   };

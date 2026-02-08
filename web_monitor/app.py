@@ -369,9 +369,26 @@ def restart_docker_service():
 
     try:
         container = docker_client.containers.get(service_name)
-        container.restart()
-        app_logger.info(f"Restarted container: {service_name}")
-        return jsonify({'message': f"Service {service_name} restarted successfully."})
+        
+        # Check if the container is restarting itself (the dashboard)
+        # We look for 'dashboard' in the name or check if the container ID matches ours
+        is_self_restart = 'dashboard' in service_name.lower() or 'web_monitor' in service_name.lower()
+
+        if is_self_restart:
+            import threading
+            def delayed_restart():
+                time.sleep(1) # Give Flask time to send the response
+                container.restart()
+            
+            thread = threading.Thread(target=delayed_restart)
+            thread.start()
+            app_logger.info(f"Initiating self-restart for: {service_name}")
+            return jsonify({'message': f"Dashboard service {service_name} is restarting. The connection will momentarily drop."})
+        else:
+            container.restart()
+            app_logger.info(f"Restarted container: {service_name}")
+            return jsonify({'message': f"Service {service_name} restarted successfully."})
+            
     except Exception as e:
         app_logger.error(f"Failed to restart container {service_name}: {e}")
         return jsonify({'error': str(e)}), 500
