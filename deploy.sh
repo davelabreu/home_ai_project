@@ -38,3 +38,18 @@ if [ $? -eq 0 ]; then
 else
     echo "--- ❌ ERROR: Deployment failed. ---"
 fi
+
+# Monitoring Option
+echo ""
+read -p "View Dashboard and Ollama container logs? (y/N): " -n 1 -r
+echo    # (optional) move to a new line
+if [[ $REPLY =~ ^[Yy]$ ]]
+then
+    echo "--- 📝 Viewing Dashboard Logs (Ctrl+C to exit) ---"
+    docker logs -f home_ai_dashboard &
+    DASHBOARD_PID=$!
+    echo "--- 📝 Viewing Ollama Logs (Ctrl+C to exit dashboard logs to see these) ---"
+    docker logs -f ollama_jetson &
+    OLLAMA_PID=$!
+    wait $DASHBOARD_PID $OLLAMA_PID # Wait for both to be killed by Ctrl+C
+fi
