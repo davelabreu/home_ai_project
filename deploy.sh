@@ -1,56 +1,67 @@
 #!/bin/bash
-cd ~/projects/dev/2.personal/home_ai_project
+# Automatically find the directory where the script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR" || exit
 
-echo "--- 🛡️  FORCE CLEARING Port 11434 ---"
-# This kills ANY process currently using the port, whether it's a service or a stray PID
-sudo fuser -k 11434/tcp > /dev/null 2>&1
+# --- Helper Functions ---
+clear_memory() {
+    echo "--- 🧹 Clearing System Caches & Defragmenting Memory ---"
+    sudo sync && echo 3 | sudo tee /proc/sys/vm/drop_caches > /dev/null
+    sudo systemctl restart docker
+}
 
-echo "--- 🧹 Clearing System Caches & Defragmenting Memory ---"
-# This tells the kernel to release as much buff/cache as possible
-sudo sync && echo 3 | sudo tee /proc/sys/vm/drop_caches > /dev/null
+clear_ollama_port() {
+    echo "--- 🛡️  FORCE CLEARING Port 11434 ---"
+    sudo fuser -k 11434/tcp > /dev/null 2>&1
+    sudo systemctl stop ollama > /dev/null 2>&1
+}
 
-echo "--- 🔄 Restarting Docker Daemon (to reset CUDA hooks) ---"
-sudo systemctl restart docker
-
-echo "--- 🚀 Pulling latest code from GitHub ---"
-git pull origin master
-
-echo "--- 🛡️  Ensuring Port 11434 is free (Killing native Ollama) ---"
-# This is the 'Self-Healing' part: stop the native service if it's squatting on the port
-sudo systemctl stop ollama > /dev/null 2>&1
-
-echo "--- 🛠️  Rebuilding & Restarting Stack ---"
-docker compose build --no-cache
-docker compose up -d --remove-orphans
-
-if [ $? -eq 0 ]; then
-    echo "--- ⏳ Waiting for Ollama container to initialize... ---"
-    sleep 8 # Increased sleep to ensure the server is ready
-    
+prime_model() {
+    echo "--- ⏳ Waiting for Ollama... ---"
+    sleep 8
     echo "--- 🧠 Priming qwen:1.8b model into VRAM ---"
-    # Remove the -d and actually wait for a response to ensure VRAM allocation
-    docker exec ollama_jetson ollama run qwen:1.8b "Generate a one-sentence greeting." > /dev/null
-    
-    echo "--- ✅ Stack is Primed & Healing Enabled ---"
-    echo "--- 📊 Dashboard: http://192.168.1.11:8050 ---"
-    
-    echo "--- 📦 Currently Loaded Models (Inside Docker): ---"
+    docker exec ollama_jetson ollama run qwen:1.8b "hi" > /dev/null
     docker exec ollama_jetson ollama ps
-else
-    echo "--- ❌ ERROR: Deployment failed. ---"
-fi
+}
 
-# Monitoring Option
+# --- Menu Logic ---
+PS3='Choose a deployment action: '
+options=("Full System Reset (The Works)" "Update Dashboard Only" "Restart/Prime Ollama Only" "Quit")
+
+select opt in "${options[@]}"
+do
+    case $opt in
+        "Full System Reset (The Works)")
+            clear_ollama_port
+            clear_memory
+            git pull origin master
+            docker compose up --build -d --remove-orphans
+            prime_model
+            break
+            ;;
+        "Update Dashboard Only")
+            git pull origin master
+            docker compose up -d --build dashboard
+            echo "--- ✅ Dashboard Updated ---"
+            break
+            ;;
+        "Restart/Prime Ollama Only")
+            clear_ollama_port
+            docker compose restart ollama
+            prime_model
+            break
+            ;;
+        "Quit")
+            exit
+            ;;
+        *) echo "invalid option $REPLY";;
+    esac
+done
+
+# --- Unified Logging ---
 echo ""
-read -p "View Dashboard and Ollama container logs? (y/N): " -n 1 -r
-echo    # (optional) move to a new line
-if [[ $REPLY =~ ^[Yy]$ ]]
-then
-    echo "--- 📝 Viewing Dashboard Logs (Ctrl+C to exit) ---"
-    docker logs -f home_ai_dashboard &
-    DASHBOARD_PID=$!
-    echo "--- 📝 Viewing Ollama Logs (Ctrl+C to exit dashboard logs to see these) ---"
-    docker logs -f ollama_jetson &
-    OLLAMA_PID=$!
-    wait $DASHBOARD_PID $OLLAMA_PID # Wait for both to be killed by Ctrl+C
+read -p "View logs? (y/N): " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    docker compose logs -f
 fi
