@@ -36,12 +36,14 @@ To create a robust, simple home automation and AI companion system. The Jetson s
 - [ ] Develop a mechanism for Jetson to offload tasks to Main PC.
 
 ### Phase 3: Infrastructure & Telemetry (Master Plan)
-- [ ] Deploy Netdata for deep hardware telemetry on Jetson.
-- [ ] Set up Homepage as a unified entry point/dashboard.
-- [ ] Configure `services.yaml` and `widgets.yaml` for Homepage integration.
+- [x] Deploy Netdata for deep hardware telemetry on Jetson.
+- [x] Set up Homepage as a unified entry point/dashboard.
+- [x] Configure `services.yaml` and `widgets.yaml` for Homepage integration.
 - [ ] Map Netdata metrics (GPU/CPU/RAM) into Homepage widgets.
-- [ ] Configure Reverse Proxy for secure external access.
-- [ ] Automate routine maintenance tasks.
+
+### Future / Parked Tasks
+- [ ] Resolve Netdata-to-InfluxDB streaming (Authentication/Parsing issues).
+- [ ] Implement long-duration saved statistics.
 
 ## Milestones
 
