@@ -50,8 +50,13 @@ app.layout = html.Div([
             html.Hr(),
             html.Div(id='project-metadata', style={'fontSize': '13px', 'color': '#555', 'marginBottom': '20px'}),
             html.H5("Data Library"),
-            html.Div(id='data-library-list', style={'fontSize': '12px'})
-        ], style={'width': '20%', 'padding': '20px', 'borderRight': '1px solid #ddd', 'minHeight': '100vh', 'float': 'left', 'backgroundColor': '#f9f9f9'}),
+            html.Div(id='data-library-list', style={'fontSize': '12px'}),
+            html.Div([
+                html.Hr(),
+                html.P("📂 Storage Location (Jetson):", style={'fontWeight': 'bold', 'fontSize': '11px', 'marginBottom': '2px'}),
+                html.Code("~/.../data_analyzer/projects/", style={'fontSize': '10px', 'color': '#666'})
+            ], style={'marginTop': 'auto', 'paddingTop': '20px'})
+        ], style={'width': '20%', 'padding': '20px', 'borderRight': '1px solid #ddd', 'minHeight': '100vh', 'display': 'flex', 'flexDirection': 'column', 'backgroundColor': '#f9f9f9'}),
 
         # Main Content Area
         html.Div([
@@ -166,7 +171,8 @@ def handle_data_actions(n_fetch, upload_contents, n_library_clicks, project_id, 
 
     # ACTION: Load from Library
     elif 'library-file' in trigger_id:
-        file_json = json.loads(trigger_id.split('.')[0])
+        # Use rsplit to handle dots in filenames safely
+        file_json = json.loads(trigger_id.rsplit('.', 1)[0])
         filename = file_json['index']
         df = pd.read_csv(os.path.join(ensure_project_dir(project_id), filename))
         return render_data_summary(df, f"Loaded from library: {filename}"), current_signal
