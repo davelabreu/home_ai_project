@@ -2,11 +2,13 @@
     "home_jetson": {
         "name": "🏠 Home Jetson Stats",
         "description": "Historical hardware telemetry from the local Jetson Nano.",
+        "type": "telemetry",
         "template": "hardware_telemetry"
     },
     "work_logs": {
         "name": "💼 Work Log Analysis",
         "description": "Professional engineering log ingestion and plotting.",
+        "type": "logs",
         "template": "log_generic"
     },
     "encoder_analysis": {
