@@ -90,25 +90,18 @@ A client-server web application providing real-time monitoring and control. This
         npm run build
         ```
 
-### 2. `data_analyzer/`
+### 2. `data_analyzer/` (AI Workbench)
 
-A dedicated microservice for data visualization.
+A specialized microservice for professional data analysis and home telemetry.
 
-*   **Purpose**: Upload, analyze, and visualize data (currently CSV).
-*   **Technologies**: Python Dash, Pandas, Plotly.
+*   **Purpose**: Multi-project data ingestion, persistent storage, and visualization.
+*   **Context**: Managed via `data_analyzer/GEMINI.md`.
 *   **Key Features**:
-    *   CSV file upload.
-    *   Displays DataFrame head and info.
-    *   Includes a basic scatter plot placeholder.
-*   **Dependencies**: `dash`, `pandas`, `plotly` (Python).
-*   **Building & Running**:
-    ```bash
-    cd data_analyzer
-    python3 -m venv .venv
-    source .venv/bin/activate
-    pip install -r requirements.txt
-    python3 app.py
-    ```
+    *   **Project Registry**: Dynamic loading of projects from `projects.json`.
+    *   **Data Library**: Automatic listing of historical ingested files in the sidebar.
+    *   **Jetson Telemetry Fetcher**: Direct API integration with Netdata for hardware stats.
+    *   **Persistence**: Data saved to host disk via Docker volumes.
+*   **Technologies**: Python Dash, Pandas, Plotly, Requests.
 
 ### 3. `scripts/ollama_chat.py`
 
@@ -142,6 +135,12 @@ Generate YAML configurations for Homepage:
 Advanced integration of Jetson-specific hardware stats (CPU load, GPU temperature, RAM usage) into Homepage using Netdata's 'chart' format.
 
 ## Project Milestones
+
+### [v0.2.0] - 2026-02-08: AI Workbench & Infrastructure Milestone
+- **Infrastructure Overhaul**: Deployed Netdata and Homepage as sidecars.
+- **AI Workbench Launch**: Refactored Data Analyzer into a project-based analytics platform.
+- **Telemetry Integration**: Real-time hardware performance fetching (Power, Freq, Uptime).
+- **Persistence Foundation**: Established Docker-backed file storage for analytical data.
 
 ### [v0.1.0] - 2026-02-08: Stable Dashboard Release
 - **Ambidextrous Architecture**: PC (Windows) management vs Jetson (Linux) control.

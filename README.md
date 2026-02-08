@@ -39,13 +39,22 @@ To create a robust, simple home automation and AI companion system. The Jetson s
 - [x] Deploy Netdata for deep hardware telemetry on Jetson.
 - [x] Set up Homepage as a unified entry point/dashboard.
 - [x] Configure `services.yaml` and `widgets.yaml` for Homepage integration.
-- [ ] Map Netdata metrics (GPU/CPU/RAM) into Homepage widgets.
+- [x] Integrate **AI Workbench** (Data Analyzer) with real-time Netdata metrics.
 
-### Future / Parked Tasks
-- [ ] Resolve Netdata-to-InfluxDB streaming (Authentication/Parsing issues).
-- [ ] Implement long-duration saved statistics.
+### Phase 4: Advanced Analytics & Orchestration
+- [ ] Implement data selection and historical reload in AI Workbench.
+- [ ] Develop custom visualization templates for specific log types.
+- [ ] Set up Wake-on-LAN (WoL) for Main PC integration.
+- [ ] Configure Reverse Proxy for secure external access.
 
 ## Milestones
+
+### [v0.2.0] - 2026-02-08
+**AI Workbench & Infrastructure Milestone**
+- **Unified Entry Point**: Homepage deployed as the primary dashboard.
+- **Microservice Expansion**: Data Analyzer refactored into a project-based workbench.
+- **Deep Telemetry**: Direct integration between AI Workbench and Netdata for hardware analysis.
+- **Persistent Data**: Host-backed storage for ingested logs and telemetry.
 
 ### [v0.1.0] - 2026-02-08
 **Stable Dashboard Baseline**
