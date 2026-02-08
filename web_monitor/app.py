@@ -227,16 +227,23 @@ def get_jetson_gpu_info():
     # Running on Jetson - use the helper script
     try:
         # Resolve path to the script.
-        # Inside Docker: /app/scripts/get_stats.py
-        # Local Windows: ../scripts/get_stats.py (relative to basedir)
         script_path = os.path.join(basedir, 'scripts', 'get_stats.py')
         
         if not os.path.exists(script_path):
-            # Try project root (one level up from web_monitor)
             script_path = os.path.abspath(os.path.join(basedir, '..', 'scripts', 'get_stats.py'))
         
         app_logger.info(f"Executing stats helper script: {script_path}")
-        result = subprocess.run(['python3', script_path], capture_output=True, text=True, check=True)
+        # Run without check=True to handle errors manually for better logging
+        result = subprocess.run(['python3', script_path], capture_output=True, text=True)
+        
+        if result.returncode != 0:
+            app_logger.error(f"Stats script failed (code {result.returncode}). Stderr: {result.stderr}")
+            return jsonify({'error': f"Script failed: {result.stderr}"}), 500
+        
+        if not result.stdout.strip():
+            app_logger.error(f"Stats script returned empty output. Stderr: {result.stderr}")
+            return jsonify({'error': "Empty output from stats script"}), 500
+
         stats = json.loads(result.stdout)
         
         # Map the helper script's output to the frontend's expected format
