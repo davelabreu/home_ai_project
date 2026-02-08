@@ -1,5 +1,5 @@
 /* Fix Dash Dropdown text color in Darkly theme */
-.Select-value-label, .Select-placeholder, .VirtualizedSelectOption {
+.Select-value-label, .Select-placeholder, .VirtualizedSelectOption, .Select--single > .Select-control .Select-value {
     color: #333 !important;
 }
 

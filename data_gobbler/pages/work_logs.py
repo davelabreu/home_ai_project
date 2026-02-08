@@ -25,10 +25,15 @@ def layout():
                             options=[{'label': p['name'], 'value': pid} for pid, p in log_projects.items()],
                             value=list(log_projects.keys())[0] if log_projects else None,
                             clearable=False,
-                            className="mb-3"
+                            className="mb-3",
+                            style={'color': 'black'}
                         ),
                         html.Label("Select File:"),
-                        dcc.Dropdown(id='log-file-selector', placeholder="Loading files..."),
+                        dcc.Dropdown(
+                            id='log-file-selector', 
+                            placeholder="Select a file...",
+                            style={'color': 'black'}
+                        ),
                     ])
                 ], className="mb-4 shadow-sm"),
                 
