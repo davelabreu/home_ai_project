@@ -10,3 +10,24 @@
 .dropdown-item {
     color: #333 !important;
 }
+
+/* Sidebar Styling */
+.nav-pills .nav-link.active {
+    background-color: #198754 !important; /* Success Green */
+    font-weight: 600;
+}
+
+.nav-link {
+    color: #aaa !important;
+    transition: all 0.2s ease;
+    margin-bottom: 5px;
+}
+
+.nav-link:hover {
+    color: #fff !important;
+    background-color: rgba(255,255,255,0.05);
+}
+
+.bi {
+    font-size: 1.1rem;
+}

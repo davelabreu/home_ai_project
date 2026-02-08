@@ -10,14 +10,16 @@ A professional-grade, sexy Dash/Plotly application for multi-project data ingest
 4.  **Saveable Templates**: Save custom plotting configurations as JSON templates to reuse across different datasets.
 5.  **LLM Ingestion (Future)**: Integrate Jetson-hosted LLMs to help parse complex logs and suggest visualizations.
 
-## Architecture (v0.3.0)
+## Architecture (v0.3.1)
 - **Framework**: Dash 2.5+ (Multi-page via `pages/`).
-- **UI**: Dash Bootstrap Components (DBC) with `DARKLY` theme.
+- **UI**: Dash Bootstrap Components (DBC) with `DARKLY` theme and custom CSS fixes.
 - **Rules**: Governed by `CODE_RULES.md`.
-- **Target Host**: Standalone development on PC -> Final deployment on Jetson.
+- **Navigation**: Persistent Navbar with global Ingestion Wizard and project-based routing.
 
 ## Current Roadmap
-- [x] **Scaffold Architecture**: Modular Pages structure, requirements, and Docker integration.
-- [ ] **Data Manager Utility**: Build the `utils/data_manager.py` to handle CSV loading and project folder management.
-- [ ] **Unified Ingestion Page**: Create an 'Upload' page that handles CSV ingestion and project assignment.
-- [ ] **Template Engine Foundation**: Start defining how a 'Plot Template' JSON looks.
+- [x] **Scaffold Architecture**: Modular Pages structure and requirements.
+- [x] **Data Manager Engine**: Robust CSV handling and project siloing logic.
+- [x] **Ingestion Wizard**: Multi-step modal for file routing and pre-processing.
+- [ ] **Data Selection**: Interactive sidebar in Work Logs for historical file reload.
+- [ ] **Plot Customization**: UI controls for trace colors, thickness, and types.
+- [ ] **Template Engine**: Saveable plotting configurations (JSON).
