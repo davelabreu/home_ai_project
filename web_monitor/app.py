@@ -217,6 +217,7 @@ def get_jetson_gpu_info():
         
         # The last line of tegrastats output usually contains the most recent data
         last_line = output_lines[-1] if output_lines else ""
+        app_logger.info(f"Raw tegrastats last_line for parsing: '{last_line}'")
         
         gpu_info = {
             'gpu_percent': None,
@@ -232,26 +233,31 @@ def get_jetson_gpu_info():
 
         # GPU Usage (GR3D_FREQ percentage)
         gr3d_percent_match = re.search(r'GR3D_FREQ (\d+)%', last_line)
+        app_logger.info(f"GR3D_FREQ match: {gr3d_percent_match}")
         if gr3d_percent_match:
             gpu_info['gpu_percent'] = int(gr3d_percent_match.group(1))
 
         # EMC Usage (Memory Controller)
         emc_match = re.search(r'EMC_FREQ (\d+)%', last_line)
+        app_logger.info(f"EMC_FREQ match: {emc_match}")
         if emc_match:
             gpu_info['emc_percent'] = int(emc_match.group(1))
 
         # GPU Temperature (e.g., gpu@53.875C)
         temp_match = re.search(r'gpu@(\d+\.?\d*)C', last_line)
+        app_logger.info(f"GPU Temp match: {temp_match}")
         if temp_match:
             gpu_info['gpu_temp_c'] = float(temp_match.group(1))
 
         # Power (VDD_IN xxxmW/yyymW) - taking the first value
         power_match = re.search(r'VDD_IN (\d+)mW', last_line)
+        app_logger.info(f"Power match: {power_match}")
         if power_match:
             gpu_info['power_mw'] = int(power_match.group(1))
         
         # RAM Usage (tegrastats reports it in 'RAM X/YMB')
         ram_match = re.search(r'RAM (\d+)/(\d+)MB', last_line)
+        app_logger.info(f"RAM match: {ram_match}")
         if ram_match:
             gpu_info['ram_usage_mb'] = int(ram_match.group(1))
             gpu_info['ram_total_mb'] = int(ram_match.group(2))
