@@ -19,115 +19,112 @@ interface GpuInfoProps {
 }
 
 const GpuInfoCard: React.FC<GpuInfoProps> = ({ gpuInfo, loading, error, title }) => {
-  if (loading) {
+  // Only show the full loading state if we don't have data yet.
+  // This prevents the card from "flashing" during refreshes.
+  if (loading && !gpuInfo) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>{title}</CardTitle>
+      <Card className="min-h-[200px]">
+        <CardHeader className="py-3 px-4">
+          <CardTitle className="text-sm font-semibold">{title}</CardTitle>
         </CardHeader>
-        <CardContent>
-          <p>Loading GPU information...</p>
+        <CardContent className="px-4 pb-4">
+          <p className="text-xs text-muted-foreground">Loading GPU information...</p>
         </CardContent>
       </Card>
     );
   }
 
-  if (error) {
+  if (error && !gpuInfo) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>{title}</CardTitle>
+      <Card className="min-h-[200px]">
+        <CardHeader className="py-3 px-4">
+          <CardTitle className="text-sm font-semibold">{title}</CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-destructive">Error: {error}</p>
+        <CardContent className="px-4 pb-4">
+          <p className="text-xs text-destructive">Error: {error}</p>
         </CardContent>
       </Card>
     );
   }
 
-  if (!gpuInfo) {
+  if (!gpuInfo && !loading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>{title}</CardTitle>
+      <Card className="min-h-[200px]">
+        <CardHeader className="py-3 px-4">
+          <CardTitle className="text-sm font-semibold">{title}</CardTitle>
         </CardHeader>
-        <CardContent>
-          <p>No GPU information available.</p>
+        <CardContent className="px-4 pb-4">
+          <p className="text-xs text-muted-foreground">No GPU information available.</p>
         </CardContent>
       </Card>
     );
   }
 
   // Determine usage and clock with fallbacks
-  const usage = gpuInfo.gpu_usage_percent !== undefined ? gpuInfo.gpu_usage_percent : gpuInfo.gpu_percent;
-  const clock = gpuInfo.gpu_clock_mhz;
+  const usage = gpuInfo ? (gpuInfo.gpu_usage_percent !== undefined ? gpuInfo.gpu_usage_percent : gpuInfo.gpu_percent) : null;
+  const clock = gpuInfo ? gpuInfo.gpu_clock_mhz : null;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
+    <Card className="min-h-[200px] transition-all duration-300">
+      <CardHeader className="py-3 px-4 flex flex-row items-center justify-between">
+        <CardTitle className="text-sm font-semibold">{title}</CardTitle>
+        {loading && <span className="animate-pulse text-[10px] text-muted-foreground italic">Updating...</span>}
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="px-4 pb-4 space-y-2">
         {/* GPU Usage */}
         {usage !== null && (
-          <div>
-            <div className="flex justify-between text-sm">
+          <div className="space-y-1">
+            <div className="flex justify-between text-xs font-medium">
               <span>GPU Usage</span>
               <span>{usage}%</span>
             </div>
-            <Progress value={usage} className="h-2" />
+            <Progress value={usage} className="h-1.5" />
           </div>
         )}
 
         {/* GPU Clock */}
         {clock !== null && clock > 0 && (
-          <div>
-            <div className="flex justify-between text-sm">
-              <span>GPU Clock</span>
-              <span>{clock} MHz</span>
-            </div>
+          <div className="flex justify-between text-xs">
+            <span className="text-muted-foreground">GPU Clock</span>
+            <span className="font-medium">{clock} MHz</span>
           </div>
         )}
 
         {/* EMC Usage */}
-        {gpuInfo.emc_percent !== null && (
-          <div>
-            <div className="flex justify-between text-sm">
-              <span>Memory Controller (EMC)</span>
+        {gpuInfo && gpuInfo.emc_percent !== null && (
+          <div className="space-y-1">
+            <div className="flex justify-between text-xs font-medium">
+              <span>Memory (EMC)</span>
               <span>{gpuInfo.emc_percent}%</span>
             </div>
-            <Progress value={gpuInfo.emc_percent} className="h-2" />
+            <Progress value={gpuInfo.emc_percent} className="h-1.5" />
           </div>
         )}
 
         {/* GPU Temperature */}
-        {gpuInfo.gpu_temp_c !== null && (
-          <div>
-            <div className="flex justify-between text-sm">
-              <span>GPU Temperature</span>
-              <span>{gpuInfo.gpu_temp_c}°C</span>
-            </div>
+        {gpuInfo && gpuInfo.gpu_temp_c !== null && (
+          <div className="flex justify-between text-xs">
+            <span className="text-muted-foreground">Temperature</span>
+            <span className="font-medium">{gpuInfo.gpu_temp_c}°C</span>
           </div>
         )}
 
         {/* Power Consumption */}
-        {gpuInfo.power_mw !== null && (
-          <div>
-            <div className="flex justify-between text-sm">
-              <span>Power Consumption</span>
-              <span>{(gpuInfo.power_mw / 1000).toFixed(2)} W</span>
-            </div>
+        {gpuInfo && gpuInfo.power_mw !== null && (
+          <div className="flex justify-between text-xs">
+            <span className="text-muted-foreground">Power</span>
+            <span className="font-medium">{(gpuInfo.power_mw / 1000).toFixed(1)}W</span>
           </div>
         )}
 
         {/* GPU RAM Usage */}
-        {gpuInfo.ram_usage_mb !== null && gpuInfo.ram_total_mb !== null && (
-          <div>
-            <div className="flex justify-between text-sm">
-              <span>GPU RAM Usage</span>
-              <span>{gpuInfo.ram_usage_mb}MB / {gpuInfo.ram_total_mb}MB</span>
+        {gpuInfo && gpuInfo.ram_usage_mb !== null && gpuInfo.ram_total_mb !== null && (
+          <div className="space-y-1">
+            <div className="flex justify-between text-[11px] font-medium">
+              <span>GPU RAM</span>
+              <span>{gpuInfo.ram_usage_mb} / {gpuInfo.ram_total_mb}MB</span>
             </div>
-            <Progress value={(gpuInfo.ram_usage_mb / gpuInfo.ram_total_mb) * 100} className="h-2" />
+            <Progress value={(gpuInfo.ram_usage_mb / gpuInfo.ram_total_mb) * 100} className="h-1.5" />
           </div>
         )}
       </CardContent>

@@ -21,52 +21,66 @@ const SystemInfoCard: React.FC<SystemInfoCardProps> = ({ title, systemInfo, erro
   };
 
   return (
-    <Card className="col-span-1">
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
+    <Card className="col-span-1 min-h-[220px]">
+      <CardHeader className="py-3 px-4 flex flex-row items-center justify-between">
+        <CardTitle className="text-sm font-semibold">{title}</CardTitle>
+        {loading && <span className="animate-pulse text-[10px] text-muted-foreground italic">Updating...</span>}
       </CardHeader>
-      <CardContent className="space-y-4">
-        {loading && <p>Loading {title.toLowerCase()}...</p>}
-        {error && <p className="text-red-500">Error fetching {title.toLowerCase()}: {error}</p>}
-        {!loading && !error && systemInfo && (
+      <CardContent className="px-4 pb-4 space-y-3">
+        {error && !systemInfo && <p className="text-xs text-red-500">Error: {error}</p>}
+        {loading && !systemInfo && <p className="text-xs text-muted-foreground">Loading status...</p>}
+        
+        {systemInfo && (
           <>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center text-sm">
-                <span>CPU Usage:</span>
+            <div className="space-y-1">
+              <div className="flex justify-between items-center text-xs font-medium">
+                <span>CPU Usage</span>
                 <span>{systemInfo.cpu_percent.toFixed(1)}%</span>
               </div>
-              <Progress value={systemInfo.cpu_percent} className={getProgressColorClass(systemInfo.cpu_percent)} />
+              <Progress value={systemInfo.cpu_percent} className={`h-1.5 ${getProgressColorClass(systemInfo.cpu_percent)}`} />
             </div>
 
-            <div className="space-y-2">
-              <div className="flex justify-between items-center text-sm">
-                <span>Memory Usage:</span>
-                <span>{systemInfo.memory_percent.toFixed(1)}% ({systemInfo.memory_used_gb}GB / {systemInfo.memory_total_gb}GB)</span>
+            <div className="space-y-1">
+              <div className="flex justify-between items-center text-xs font-medium">
+                <span>Memory</span>
+                <span className="text-[10px] text-muted-foreground">{systemInfo.memory_used_gb} / {systemInfo.memory_total_gb}GB</span>
               </div>
-              <Progress value={systemInfo.memory_percent} className={getProgressColorClass(systemInfo.memory_percent)} />
+              <Progress value={systemInfo.memory_percent} className={`h-1.5 ${getProgressColorClass(systemInfo.memory_percent)}`} />
             </div>
 
-            <div className="space-y-2">
-              <div className="flex justify-between items-center text-sm">
-                <span>Disk Usage:</span>
-                <span>{systemInfo.disk_percent.toFixed(1)}% ({systemInfo.disk_used_gb}GB / {systemInfo.disk_total_gb}GB)</span>
+            <div className="space-y-1">
+              <div className="flex justify-between items-center text-xs font-medium">
+                <span>Disk</span>
+                <span className="text-[10px] text-muted-foreground">{systemInfo.disk_used_gb} / {systemInfo.disk_total_gb}GB</span>
               </div>
-              <Progress value={systemInfo.disk_percent} className={getProgressColorClass(systemInfo.disk_percent)} />
+              <Progress value={systemInfo.disk_percent} className={`h-1.5 ${getProgressColorClass(systemInfo.disk_percent)}`} />
             </div>
 
-            <div className="flex justify-between items-center text-sm">
-              <span>Uptime:</span>
-              <span className="font-medium">{systemInfo.uptime}</span>
+            <div className="flex justify-between items-center text-xs pt-1">
+              <span className="text-muted-foreground">Uptime</span>
+              <span className="font-semibold">{systemInfo.uptime}</span>
             </div>
+
             {(onHardRebootClick || onSoftRebootClick) && (
-              <div className="pt-4 flex space-x-2"> {/* Use flexbox to space buttons */}
+              <div className="pt-2 flex gap-2">
                 {onHardRebootClick && (
-                  <Button onClick={onHardRebootClick} disabled={loading || error !== null} className="flex-1" variant="destructive"> {/* Added variant for distinction */}
+                  <Button 
+                    onClick={onHardRebootClick} 
+                    disabled={loading} 
+                    size="sm"
+                    variant="destructive"
+                    className="flex-1 h-7 text-[10px] px-2"
+                  >
                     Hard Reboot
                   </Button>
                 )}
                 {onSoftRebootClick && (
-                  <Button onClick={onSoftRebootClick} disabled={loading || error !== null} className="flex-1">
+                  <Button 
+                    onClick={onSoftRebootClick} 
+                    disabled={loading} 
+                    size="sm"
+                    className="flex-1 h-7 text-[10px] px-2"
+                  >
                     Soft Reboot
                   </Button>
                 )}

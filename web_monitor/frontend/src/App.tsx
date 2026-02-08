@@ -91,125 +91,96 @@ function App() {
       <div className="min-h-screen bg-background text-foreground font-sans antialiased">
         <FaviconChanger isJetsonApp={isJetsonApp} configLoading={configLoading} />
 
-        <header className="py-6 border-b border-border">
-          <div className="container mx-auto px-4 flex items-center justify-center space-x-4">
+        <header className="py-4 border-b border-border">
+          <div className="container mx-auto px-4 flex items-center justify-center space-x-3">
             {isJetsonApp ? (
-              <img src={NvidiaLogo} alt="Nvidia Logo" style={{ height: '3rem', width: 'auto' }} />
+              <img src={NvidiaLogo} alt="Nvidia Logo" style={{ height: '2rem', width: 'auto' }} />
             ) : (
-              <img src={DesktopIcon} alt="Desktop Icon" style={{ height: '3rem', width: 'auto' }} />
+              <img src={DesktopIcon} alt="Desktop Icon" style={{ height: '2rem', width: 'auto' }} />
             )}
             <div>
-              <h1 className="text-3xl font-bold text-center">
+              <h1 className="text-xl font-bold tracking-tight">
                 {isJetsonApp ? "Jetson Dashboard" : "PC Dashboard"}
               </h1>
-              <p className="text-center text-muted-foreground">
-                {isJetsonApp ? "Monitor your Jetson." : "Monitor your local PC and a remote host."}
-              </p>
             </div>
           </div>
         </header>
-        <main className="container mx-auto px-4 py-8">
-          {configLoading && <p className="text-center">Loading configuration...</p>}
-          {configError && <p className="text-center text-destructive">Error loading configuration: {configError}</p>}
+
+        <main className="container mx-auto px-4 py-6 max-w-6xl">
+          {configLoading && <p className="text-center text-sm italic">Loading configuration...</p>}
+          {configError && <p className="text-center text-sm text-destructive">Error: {configError}</p>}
           
           {!configLoading && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
               {/* Local System Info */}
               <SystemInfoCard 
-                title={isJetsonApp ? "Jetson System Status" : "Local PC System Status"} 
+                title={isJetsonApp ? "Local System" : "Local PC"} 
                 systemInfo={localSystem.info} 
                 error={localSystem.error} 
                 loading={localSystem.loading} 
               />
 
-              {/* Remote System Info (conditionally rendered) */}
-              {monitor_target_host_set ? (
+              {/* Remote System Info & GPU Status */}
+              {monitor_target_host_set && (
                 <>
                   <SystemInfoCard 
-                    title="Remote Host System Status" 
+                    title="Remote Jetson" 
                     systemInfo={remoteSystem.info} 
                     error={remoteSystem.error} 
                     loading={remoteSystem.loading} 
-                    onHardRebootClick={handleHardReboot} // Pass the new hard reboot handler
-                    onSoftRebootClick={handleSoftReboot} // Pass the new soft reboot handler
+                    onHardRebootClick={handleHardReboot}
+                    onSoftRebootClick={handleSoftReboot}
                   />
                   <GpuInfoCard 
-                    title="Jetson GPU Status" 
+                    title="Jetson GPU" 
                     gpuInfo={gpu.gpuInfo} 
                     error={gpu.error} 
                     loading={gpu.loading} 
                   />
-                  {rebootMessage && (
-                    <p className={`text-center text-sm ${rebootMessage.includes("failed") ? "text-destructive" : "text-primary"} mt-2`}>
-                      {rebootMessage}
-                    </p>
-                  )}
-                  {softRebootMessage && ( // Display soft reboot message
-                    <p className={`text-center text-sm ${softRebootMessage.includes("failed") ? "text-destructive" : "text-primary"} mt-2`}>
-                      {softRebootMessage}
-                    </p>
-                  )}
                 </>
-              ) : (
-                !remoteSystem.loading && remoteSystem.error && (
-                  <SystemInfoCard 
-                    title="Remote Host System Status (Not Configured)" 
-                    systemInfo={null} 
-                    error={remoteSystem.error} 
-                    loading={remoteSystem.loading} 
-                  />
-                )
               )}
-            </div>
-          )}
 
-          {/* Chat with Ollama - NEW POSITION */}
-          {/* Always render ChatCard if it's the Jetson App OR if configured for remote monitoring */}
-          {(isJetsonApp || monitor_target_host_set) && (
-            <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
-              <ChatCard />
-            </div>
-          )}
+              {/* Chat Card - Positioned in the grid */}
+              {(isJetsonApp || monitor_target_host_set) && (
+                <ChatCard />
+              )}
 
-          {!configLoading && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8"> {/* Added mt-8 for spacing */}
-              {/* Local Network Status */}
+              {/* Network Cards */}
               <NetworkStatusCard 
-                title={isJetsonApp ? "Jetson Network Devices" : "Local PC Network Devices"} 
+                title={isJetsonApp ? "Local Network" : "PC Network"} 
                 networkStatus={localNetwork.devices} 
                 error={localNetwork.error} 
                 loading={localNetwork.loading} 
               />
 
-              {/* Remote Network Status (conditionally rendered) */}
-              {monitor_target_host_set ? (
+              {monitor_target_host_set && (
                 <NetworkStatusCard 
-                  title="Remote Host Network Devices" 
+                  title="Remote Network" 
                   networkStatus={remoteNetwork.devices} 
                   error={remoteNetwork.error} 
                   loading={remoteNetwork.loading} 
                 />
-              ) : (
-                !remoteNetwork.loading && remoteNetwork.error && (
-                  <NetworkStatusCard 
-                    title="Remote Host Network Devices (Not Configured)" 
-                    networkStatus={[]} 
-                    error={remoteNetwork.error} 
-                    loading={remoteNetwork.loading} 
-                  />
-                )
               )}
             </div>
           )}
 
-          {/* Placeholder for future features */}
-          <section className="mt-8 p-4 border rounded-lg shadow-sm bg-card text-card-foreground">
-            <h2 className="text-xl font-semibold mb-4">Other Features (Coming Soon!)</h2>
-            <p className="text-muted-foreground">
-              Deployment tools, 
-              Qwen chat interface...
-            </p>
-          </section>
+          {rebootMessage && (
+            <div className="fixed bottom-4 right-4 z-50 max-w-xs p-3 rounded-lg border bg-card shadow-lg text-xs transition-all animate-in fade-in slide-in-from-bottom-2">
+              <p className={rebootMessage.includes("failed") ? "text-destructive" : "text-primary font-medium"}>
+                {rebootMessage}
+              </p>
+              <Button size="sm" variant="ghost" className="h-6 mt-2 w-full text-[10px]" onClick={() => setRebootMessage(null)}>Dismiss</Button>
+            </div>
+          )}
+          
+          {softRebootMessage && (
+            <div className="fixed bottom-4 right-4 z-50 max-w-xs p-3 rounded-lg border bg-card shadow-lg text-xs transition-all animate-in fade-in slide-in-from-bottom-2">
+              <p className={softRebootMessage.includes("failed") ? "text-destructive" : "text-primary font-medium"}>
+                {softRebootMessage}
+              </p>
+              <Button size="sm" variant="ghost" className="h-6 mt-2 w-full text-[10px]" onClick={() => setSoftRebootMessage(null)}>Dismiss</Button>
+            </div>
+          )}
         </main>
       </div>
     </ThemeProvider>

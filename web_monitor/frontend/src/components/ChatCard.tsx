@@ -35,11 +35,8 @@ const ChatCard: React.FC = () => {
     try {
       let chatApiUrl: string;
       if (monitor_target_host_set && monitorTargetHost && monitorTargetPort) {
-        // When monitoring a remote host, use its configured host and port
         chatApiUrl = `http://${monitorTargetHost}:${monitorTargetPort}/api/chat`;
       } else {
-        // When running locally (Jetson's own dashboard), use a relative path
-        // The browser will resolve this relative to the current URL (e.g., http://192.168.1.11:8050)
         chatApiUrl = '/api/chat';
       }
 
@@ -66,27 +63,25 @@ const ChatCard: React.FC = () => {
     }
   };
 
-  // Chat is disabled if config is still loading or if there's a config error for the remote host.
-  // It is NOT disabled if monitorTargetHost is null (i.e., when on the Jetson's local dashboard).
   const isChatDisabled = isSending || configLoading;
 
   return (
-    <Card className="col-span-1 md:col-span-2 lg:col-span-1 h-[500px] flex flex-col">
-      <CardHeader>
-        <CardTitle>Chat with Jetson AI (Ollama)</CardTitle>
+    <Card className="col-span-1 md:col-span-2 lg:col-span-1 h-[400px] flex flex-col transition-all">
+      <CardHeader className="py-3 px-4">
+        <CardTitle className="text-sm font-semibold">Chat with AI (Ollama)</CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col space-y-4 overflow-hidden">
-        <div className="flex-1 overflow-y-auto pr-4 -mr-4"> {/* Custom scrollbar handling */}
+      <CardContent className="flex-1 flex flex-col px-4 pb-3 space-y-3 overflow-hidden">
+        <div className="flex-1 overflow-y-auto pr-2 -mr-2 space-y-2">
           {messages.map((msg, index) => (
             <div
               key={index}
-              className={`flex mb-2 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+              className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-[70%] p-2 rounded-lg ${
+                className={`max-w-[85%] px-3 py-1.5 rounded-2xl text-xs ${
                   msg.sender === 'user'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                    ? 'bg-primary text-primary-foreground rounded-tr-none'
+                    : 'bg-muted text-foreground rounded-tl-none'
                 }`}
               >
                 {msg.text}
@@ -95,20 +90,17 @@ const ChatCard: React.FC = () => {
           ))}
           <div ref={messagesEndRef} />
         </div>
-        {configError && !monitor_target_host_set && ( // Display error if config fails and it's not remote monitoring
-          <p className="text-center text-red-500 mt-2">
-            Error loading chat configuration: {configError}
+        
+        {configError && !monitor_target_host_set && (
+          <p className="text-[10px] text-center text-destructive">
+            Config Error: {configError}
           </p>
         )}
-        {(configLoading || (!monitor_target_host_set && configError)) && (
-             <p className="text-center text-muted-foreground mt-2">
-                {configLoading ? "Loading chat configuration..." : "Chat unavailable due to configuration error."}
-             </p>
-        )}
-        <div className="flex mt-auto space-x-2 p-2 border-t dark:border-gray-700">
+        
+        <div className="flex items-center gap-2 pt-2 border-t border-border/50">
           <Input
             type="text"
-            placeholder="Type your message..."
+            placeholder="Ask anything..."
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyPress={(e) => {
@@ -116,10 +108,15 @@ const ChatCard: React.FC = () => {
                 handleSendMessage();
               }
             }}
-            className="flex-1"
+            className="flex-1 h-8 text-xs px-3 focus-visible:ring-1"
           />
-          <Button onClick={handleSendMessage}>
-            {isSending ? 'Sending...' : 'Send'}
+          <Button 
+            onClick={handleSendMessage} 
+            disabled={isChatDisabled}
+            size="sm"
+            className="h-8 px-3 text-xs"
+          >
+            {isSending ? '...' : 'Send'}
           </Button>
         </div>
       </CardContent>
