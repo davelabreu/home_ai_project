@@ -226,10 +226,14 @@ def get_jetson_gpu_info():
     
     # Running on Jetson - use the helper script
     try:
-        # Resolve path to the script relative to the project root
-        # Based on structure: home_ai_project/web_monitor/app.py -> home_ai_project/scripts/get_stats.py
-        project_root = os.path.abspath(os.path.join(basedir, '..'))
-        script_path = os.path.join(project_root, 'scripts', 'get_stats.py')
+        # Resolve path to the script.
+        # Inside Docker: /app/scripts/get_stats.py
+        # Local Windows: ../scripts/get_stats.py (relative to basedir)
+        script_path = os.path.join(basedir, 'scripts', 'get_stats.py')
+        
+        if not os.path.exists(script_path):
+            # Try project root (one level up from web_monitor)
+            script_path = os.path.abspath(os.path.join(basedir, '..', 'scripts', 'get_stats.py'))
         
         app_logger.info(f"Executing stats helper script: {script_path}")
         result = subprocess.run(['python3', script_path], capture_output=True, text=True, check=True)

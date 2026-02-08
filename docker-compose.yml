@@ -3,7 +3,8 @@ version: '3.8'
 services:
   dashboard:
     build: 
-      context: ./web_monitor
+      context: .
+      dockerfile: ./web_monitor/Dockerfile
     container_name: home_ai_dashboard
     depends_on:
       - ollama

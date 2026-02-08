@@ -1,9 +1,9 @@
 # Stage 1: Frontend Build
 FROM node:20-alpine AS frontend-builder
 WORKDIR /app/frontend
-COPY frontend/package.json frontend/package-lock.json ./
+COPY web_monitor/frontend/package.json web_monitor/frontend/package-lock.json ./
 RUN npm install
-COPY frontend/. .
+COPY web_monitor/frontend/. .
 RUN npm run build
 
 # Stage 2: Backend (Python) Build
@@ -28,15 +28,15 @@ RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.10 1
 RUN update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
 
 # Copy backend requirements and install
-COPY requirements.txt .
+COPY web_monitor/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy built frontend from frontend-builder stage
 COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
 
 # Explicitly copy application files that can change
-COPY app.py .
-COPY templates /app/templates
+COPY web_monitor/app.py .
+COPY web_monitor/templates /app/templates
 COPY scripts /app/scripts
 
 # Expose the port that Flask will run on
