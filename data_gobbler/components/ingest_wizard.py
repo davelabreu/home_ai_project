@@ -88,10 +88,10 @@ def handle_wizard_logic(trigger_signal, n_cancel, n_submit, contents, project_id
 
     # 1. Open/Close Logic
     if "wizard-trigger-store" in trigger and (trigger_signal and trigger_signal > 0):
-        return True, "", True, "", dash.no_update, ""
+        return True, "", True, "", dash.no_update, "", dash.no_update
 
     if "wizard-cancel" in trigger:
-        return False, "", True, "", dash.no_update, ""
+        return False, "", True, "", dash.no_update, "", dash.no_update
 
     # 2. Submission Logic (The actual 'Gobbling')
     if "wizard-submit" in trigger and contents and project_id:
