@@ -1,13 +1,10 @@
 - Core AI:
     - Ollama:
-        icon: ollama.svg
+        icon: si-ollama
         href: http://192.168.1.11:11434
         description: Local LLM Runner
         server: my-docker-host
         container: ollama_jetson
-        widget:
-          type: ollama
-          url: http://192.168.1.11:11434
 
 - Management:
     - Web Monitor:
@@ -17,7 +14,7 @@
         server: my-docker-host
         container: home_ai_dashboard
     - Netdata:
-        icon: netdata.svg
+        icon: mdi-chart-line
         href: http://192.168.1.11:19999
         description: Real-time System Telemetry
         server: my-docker-host

@@ -7,8 +7,7 @@
     memory: true
 
 - netdata:
-    url: http://192.168.1.11:19999
+    url: http://netdata:19999
     charts:
       - system.cpu
       - mem.available
-      - sensors.thermal_thermal_zone0_temp # Often maps to CPU/GPU SoC on Jetson
