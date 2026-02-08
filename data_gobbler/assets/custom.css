@@ -1,0 +1,12 @@
+/* Fix Dash Dropdown text color in Darkly theme */
+.Select-value-label, .Select-placeholder, .VirtualizedSelectOption {
+    color: #333 !important;
+}
+
+.is-open .Select-control {
+    background-color: #fff !important;
+}
+
+.dropdown-item {
+    color: #333 !important;
+}

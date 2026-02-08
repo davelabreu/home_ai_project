@@ -38,6 +38,7 @@ def render_ingest_wizard():
                     id='wizard-project-dropdown',
                     options=[{'label': p['name'], 'value': pid} for pid, p in projects.items()],
                     placeholder="Select a project...",
+                    style={'color': 'black'} # Ensures text is readable in the dropdown list and selection
                 ),
                 html.Div(id='wizard-project-info', className="mt-2 small italic")
             ], className="mb-4"),
