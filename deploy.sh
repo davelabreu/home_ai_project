@@ -48,17 +48,23 @@ reboot_container_menu() {
     done
 }
 
-# --- New Logic: Restart Everything EXCEPT Ollama ---
-restart_non_ai_services() {
-    echo "--- 🧨 Rebooting all services EXCEPT Ollama ---"
-    # Get all services, filter out any with 'ollama' in the name
-    local services_to_restart=$(docker compose ps --services | grep -v "ollama")
+# --- Improved Logic: Rebuild Everything EXCEPT Ollama ---
+rebuild_non_ai_services() {
+    echo "--- 🛠️ Rebuilding & Updating all services EXCEPT Ollama ---"
     
-    if [ -n "$services_to_restart" ]; then
-        docker compose restart $services_to_restart
-        echo "--- ✅ Services restarted: $services_to_restart ---"
+    # 1. Pull latest code
+    git pull origin master
+
+    # 2. Get services, excluding ollama
+    local services_to_rebuild=$(docker compose ps --services | grep -v "ollama")
+    
+    if [ -n "$services_to_rebuild" ]; then
+        # 3. Use 'up' with '--build' on only those services
+        # This is the "Best Practice" way to update code without a full reset
+        docker compose up -d --build $services_to_rebuild
+        echo "--- ✅ Services updated and rebuilt: $services_to_rebuild ---"
     else
-        echo "--- ⚠️ No other services found to restart. ---"
+        echo "--- ⚠️ No other services found to rebuild. ---"
     fi
 }
 
@@ -85,8 +91,7 @@ do
             break
             ;;
         "Restart All EXCEPT Ollama")
-            git pull origin master
-            restart_non_ai_services
+            rebuild_non_ai_services
             break
             ;;
         "Update Dashboard Only")
