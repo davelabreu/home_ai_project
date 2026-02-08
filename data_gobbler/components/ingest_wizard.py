@@ -6,6 +6,7 @@ from utils.processors import DataProcessors
 import base64
 import io
 import pandas as pd
+import json
 
 def render_ingest_wizard():
     """
@@ -38,7 +39,7 @@ def render_ingest_wizard():
                     id='wizard-project-dropdown',
                     options=[{'label': p['name'], 'value': pid} for pid, p in projects.items()],
                     placeholder="Select a project...",
-                    style={'color': 'black'} # Ensures text is readable in the dropdown list and selection
+                    style={'color': 'black'}
                 ),
                 html.Div(id='wizard-project-info', className="mt-2 small italic")
             ], className="mb-4"),
@@ -54,6 +55,7 @@ def render_ingest_wizard():
 
 # --- Callbacks for the Wizard ---
 
+@callback(
     [Output("ingest-wizard-modal", "is_open"),
      Output("wizard-preview-area", "children"),
      Output("wizard-submit", "disabled"),
@@ -86,10 +88,10 @@ def handle_wizard_logic(trigger_signal, n_cancel, n_submit, contents, project_id
 
     # 1. Open/Close Logic
     if "wizard-trigger-store" in trigger and (trigger_signal and trigger_signal > 0):
-        return True, "", True, "", dash.no_update, "", dash.no_update
+        return True, "", True, "", dash.no_update, ""
 
     if "wizard-cancel" in trigger:
-        return False, "", True, "", dash.no_update, "", dash.no_update
+        return False, "", True, "", dash.no_update, ""
 
     # 2. Submission Logic (The actual 'Gobbling')
     if "wizard-submit" in trigger and contents and project_id:
@@ -126,14 +128,11 @@ def handle_wizard_logic(trigger_signal, n_cancel, n_submit, contents, project_id
                 html.P(f"Target Project: {project_id}", className="mb-0")
             ], color="success")
             
-            return True, preview, False, f"📄 {filename}", dash.no_update, project_info
+            return True, preview, False, f"📄 {filename}", dash.no_update, project_info, dash.no_update
         except Exception as e:
-            return True, dbc.Alert(f"❌ Error reading file: {e}", color="danger"), True, "", dash.no_update, project_info
+            return True, dbc.Alert(f"❌ Error reading file: {e}", color="danger"), True, "", dash.no_update, project_info, dash.no_update
 
     if contents:
-        return True, html.P("Please select a project to continue.", className="text-warning"), True, f"📄 {filename}", dash.no_update, project_info
+        return True, html.P("Please select a project to continue.", className="text-warning"), True, f"📄 {filename}", dash.no_update, project_info, dash.no_update
 
-    return is_open, dash.no_update, True, "", dash.no_update, project_info
-
-# Note: The actual 'Saving' logic will be added in the next step to ensure 
-# the DataManager integration is clean.
+    return is_open, dash.no_update, True, "", dash.no_update, project_info, dash.no_update

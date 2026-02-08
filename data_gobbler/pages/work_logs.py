@@ -79,15 +79,21 @@ def layout():
 
 @callback(
     [Output('log-project-selector', 'value'),
-     Output('log-file-selector', 'value')],
+     Output('log-file-selector', 'options', allow_duplicate=True),
+     Output('log-file-selector', 'value', allow_duplicate=True)],
     Input('url', 'pathname'),
     State('last-ingested-file', 'data'),
-    prevent_initial_call=False
+    prevent_initial_call=True
 )
 def auto_select_ingested_file(pathname, last_ingest):
     if pathname == '/work-logs' and last_ingest and 'project_id' in last_ingest:
-        return last_ingest['project_id'], last_ingest['filename']
-    return dash.no_update, dash.no_update
+        pid = last_ingest['project_id']
+        fname = last_ingest['filename']
+        # Must load options manually here to ensure the value is valid immediately
+        files = DataManager.list_files(pid)
+        options = [{'label': f, 'value': f} for f in files]
+        return pid, options, fname
+    return dash.no_update, dash.no_update, dash.no_update
 
 # --- Existing Callbacks ---
 
