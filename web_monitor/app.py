@@ -98,17 +98,15 @@ def resolve_hostname(ip):
 @app.route('/api/local_network_status')
 def get_local_network_status():
     """
-    Retrieves and returns network status information from the local machine.
-    This function processes 'arp -a' command output to list connected devices.
+    Retrieves and returns network status information from the local machine quickly.
+    Uses 'arp -a' which is near-instant as it reads the system cache.
     """
     devices = []
     device_names = load_device_names()
     try:
         if sys.platform.startswith('win'):
-            # Windows specific 'arp -a' command and parsing
             result = subprocess.run(['arp', '-a'], capture_output=True, text=True, check=True)
             output_lines = result.stdout.splitlines()
-
             arp_pattern_win = re.compile(r'\s*(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s*([0-9a-fA-F]{2}-[0-9a-fA-F]{2}-[0-9a-fA-F]{2}-[0-9a-fA-F]{2}-[0-9a-fA-F]{2}-[0-9a-fA-F]{2})\s*(dynamic|static)')
 
             for line in output_lines:
@@ -116,118 +114,102 @@ def get_local_network_status():
                 if match:
                     ip, mac_win, _type = match.groups()
                     mac = mac_win.replace('-', ':').upper()
-                    
-                    # Try to get name from: 1. Manual Mapping, 2. Reverse DNS
+                    devices.append({
+                        'ip': ip, 
+                        'mac': mac, 
+                        'interface': 'arp cache',
+                        'name': device_names.get(mac) or resolve_hostname(ip)
+                    })
+        else: # Linux/Jetson
+            result = subprocess.run(['arp', '-a'], capture_output=True, text=True, check=True)
+            output_lines = result.stdout.splitlines()
+            arp_pattern_linux = re.compile(r'(\S+) \((\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\) at ([0-9a-fA-F:]+) \[ether\] on (\w+)')
+
+            for line in output_lines:
+                match = arp_pattern_linux.search(line)
+                if match:
+                    hostname, ip, mac, interface = match.groups()
+                    mac = mac.upper()
                     name = device_names.get(mac)
-                    if not name:
-                        name = resolve_hostname(ip)
+                    if not name and hostname != '?':
+                        name = hostname
                     
                     devices.append({
                         'ip': ip, 
                         'mac': mac, 
-                        'interface': 'unknown (Windows)',
-                        'name': name
+                        'interface': interface,
+                        'name': name or resolve_hostname(ip)
                     })
-        else: # Linux/Jetson specific logic
-            try:
-                # Try to use nmap for a more detailed scan if available
-                # We'll use a local network range, ideally detected but 192.168.1.0/24 is common
-                # To be safer, we can try to find the network range first
-                result = subprocess.run(['nmap', '-sn', '192.168.1.0/24'], capture_output=True, text=True, timeout=10)
-                nmap_output = result.stdout
-                
-                # Parse nmap output
-                # Example:
-                # Nmap scan report for _gateway (192.168.1.1)
-                # Host is up (0.00046s latency).
-                # MAC Address: 94:18:65:18:8C:63 (Unknown)
-                
-                # Regex to match Nmap output blocks
-                # Needs to handle both cases: with hostname and without
-                # Nmap scan report for ([^(\s]+)?\s*\(?(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\)?
-                # MAC Address: ([0-9a-fA-F:]+) \(([^)]+)\)
-                
-                nmap_pattern = re.compile(r'Nmap scan report for ([^(\s]+)?\s*\(?(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\)?.*?MAC Address: ([0-9a-fA-F:]+) \(([^)]+)\)', re.DOTALL)
-                
-                matches = nmap_pattern.findall(nmap_output)
-                for hostname, ip, mac, vendor in matches:
-                    mac = mac.upper()
-                    name = device_names.get(mac)
-                    if not name:
-                        if hostname and hostname != '_gateway':
-                            name = hostname
-                        elif vendor and vendor != 'Unknown':
-                            name = vendor
-                    
-                    devices.append({
-                        'ip': ip,
-                        'mac': mac,
-                        'interface': 'nmap scan',
-                        'name': name
-                    })
-                
-                if not devices: # If nmap found nothing or failed to parse, fall back
-                    raise Exception("Nmap output empty or unparseable")
-
-            except (subprocess.CalledProcessError, FileNotFoundError, Exception) as e:
-                app.logger.info(f"Nmap scan failed or not available, falling back to arp: {e}")
-                result = subprocess.run(['arp', '-a'], capture_output=True, text=True, check=True)
-                output_lines = result.stdout.splitlines()
-
-                # Regex to parse 'arp -a' output on Linux: '? (IP_ADDRESS) at MAC_ADDRESS [ether] on INTERFACE'
-                # Also handles names if present: 'name (IP_ADDRESS) at MAC_ADDRESS [ether] on INTERFACE'
-                arp_pattern_linux = re.compile(r'(\S+) \((\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\) at ([0-9a-fA-F:]+) \[ether\] on (\w+)')
-
-                for line in output_lines:
-                    match = arp_pattern_linux.search(line)
-                    if match:
-                        hostname, ip, mac, interface = match.groups()
-                        mac = mac.upper()
-                        
-                        # Use manual mapping first, then arp-reported name if it's not '?'
-                        name = device_names.get(mac)
-                        if not name and hostname != '?':
-                            name = hostname
-                        
-                        if not name:
-                            name = resolve_hostname(ip)
-
-                        devices.append({
-                            'ip': ip, 
-                            'mac': mac, 
-                            'interface': interface,
-                            'name': name
-                        })
             
-            # Attempt to add the Jetson device's own IP and MAC address to the list.
+            # Add self
             try:
-                jetson_ip_result = subprocess.run(['hostname', '-I'], capture_output=True, text=True, check=True)
-                jetson_ip = jetson_ip_result.stdout.split()[0]
-                
-                # Dynamically find the first non-lo network interface for MAC retrieval
+                jetson_ip = subprocess.run(['hostname', '-I'], capture_output=True, text=True).stdout.split()[0]
                 interfaces = os.listdir('/sys/class/net/')
-                primary_iface = 'eth0' # Default
-                for iface in interfaces:
-                    if iface != 'lo' and not iface.startswith('br-') and not iface.startswith('docker'):
-                        primary_iface = iface
-                        break
-                
-                jetson_mac_result = subprocess.run(['cat', f'/sys/class/net/{primary_iface}/address'], capture_output=True, text=True, check=True)
-                jetson_mac = jetson_mac_result.stdout.strip().upper()
-                
-                name = device_names.get(jetson_mac, "Jetson Nano")
-                
+                primary_iface = next((i for i in interfaces if i not in ['lo'] and not i.startswith(('br-', 'docker'))), 'eth0')
+                jetson_mac = subprocess.run(['cat', f'/sys/class/net/{primary_iface}/address'], capture_output=True, text=True).stdout.strip().upper()
                 devices.append({
                     'ip': jetson_ip, 
                     'mac': jetson_mac, 
-                    'interface': f'self (Jetson - {primary_iface})',
-                    'name': name
+                    'interface': f'self ({primary_iface})',
+                    'name': device_names.get(jetson_mac, "Jetson Nano")
                 })
-            except Exception as e:
-                app.logger.warning(f"Could not determine Jetson's own IP/MAC: {e}")
-
+            except: pass
 
         return jsonify(devices)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/local_network_scan')
+def get_local_network_scan():
+    """
+    Performs a deeper network scan using nmap. This is slow but provides
+    richer info like vendor names and better hostnames.
+    """
+    if sys.platform.startswith('win'):
+        # On Windows, we'll just stick to what we have or return empty for now
+        # as nmap isn't standard.
+        return jsonify([])
+
+    devices = []
+    device_names = load_device_names()
+    try:
+        # Ping scan the local subnet
+        result = subprocess.run(['nmap', '-sn', '192.168.1.0/24'], capture_output=True, text=True, timeout=15)
+        nmap_output = result.stdout
+        
+        # Parse: Nmap scan report for [hostname] ([IP]) ... MAC Address: [MAC] ([Vendor])
+        nmap_pattern = re.compile(r'Nmap scan report for ([^(\s]+)?\s*\(?(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\)?.*?MAC Address: ([0-9a-fA-F:]+) \(([^)]+)\)', re.DOTALL)
+        
+        matches = nmap_pattern.findall(nmap_output)
+        for hostname, ip, mac, vendor in matches:
+            mac = mac.upper()
+            name = device_names.get(mac)
+            if not name:
+                if hostname and hostname != '_gateway':
+                    name = hostname
+                elif vendor and vendor != 'Unknown':
+                    name = vendor
+            
+            devices.append({
+                'ip': ip,
+                'mac': mac,
+                'interface': 'nmap scan',
+                'name': name
+            })
+        return jsonify(devices)
+    except Exception as e:
+        app_logger.error(f"Deep scan failed: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/remote_network_scan')
+def get_remote_network_scan():
+    if not MONITOR_TARGET_HOST:
+        return jsonify({'error': 'Not configured'}), 400
+    try:
+        response = requests.get(f"http://{MONITOR_TARGET_HOST}:{MONITOR_TARGET_PORT}/api/local_network_scan", timeout=20)
+        return jsonify(response.json())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
     except subprocess.CalledProcessError as e:
         return jsonify({'error': f"Command failed: {e.cmd} - {e.stderr}"}), 500
     except FileNotFoundError:
