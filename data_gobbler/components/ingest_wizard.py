@@ -85,7 +85,7 @@ def handle_wizard_logic(trigger_signal, n_cancel, n_submit, contents, project_id
         project_info = dbc.Badge(f"Selected: {p.get('name')}", color="info", className="p-2")
 
     # 1. Open/Close Logic
-    if "wizard-trigger-store" in trigger and trigger_signal:
+    if "wizard-trigger-store" in trigger and (trigger_signal and trigger_signal > 0):
         return True, "", True, "", dash.no_update, ""
 
     if "wizard-cancel" in trigger:

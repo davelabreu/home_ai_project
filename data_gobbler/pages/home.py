@@ -35,4 +35,6 @@ layout = dbc.Container([
     prevent_initial_call=True
 )
 def relay_home_trigger(n, current):
+    if n is None:
+        raise dash.exceptions.PreventUpdate
     return (current or 0) + 1

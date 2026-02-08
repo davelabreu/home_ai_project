@@ -84,6 +84,8 @@ app.layout = html.Div([
     prevent_initial_call=True
 )
 def relay_sidebar_trigger(n, current):
+    if n is None:
+        raise dash.exceptions.PreventUpdate
     return (current or 0) + 1
 
 if __name__ == '__main__':
