@@ -32,6 +32,7 @@ navbar = dbc.NavbarSimple(
 )
 
 app.layout = dbc.Container([
+    dcc.Location(id='url', refresh=True),
     navbar,
     dash.page_container,
     render_ingest_wizard() # Globally available modal

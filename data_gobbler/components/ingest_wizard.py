@@ -57,7 +57,8 @@ def render_ingest_wizard():
     [Output("ingest-wizard-modal", "is_open"),
      Output("wizard-preview-area", "children"),
      Output("wizard-submit", "disabled"),
-     Output("wizard-file-info", "children")],
+     Output("wizard-file-info", "children"),
+     Output("url", "pathname")],
     [Input("open-wizard-btn", "n_clicks"),
      Input("wizard-cancel", "n_clicks"),
      Input("wizard-submit", "n_clicks"),
@@ -70,16 +71,16 @@ def render_ingest_wizard():
 def handle_wizard_logic(n_open, n_cancel, n_submit, contents, project_id, is_open, filename):
     ctx = dash.callback_context
     if not ctx.triggered:
-        return is_open, dash.no_update, True, ""
+        return is_open, dash.no_update, True, "", dash.no_update
     
     trigger = ctx.triggered[0]['prop_id']
 
     # 1. Open/Close Logic
     if "open-wizard-btn" in trigger:
-        return True, "", True, ""
+        return True, "", True, "", dash.no_update
     
     if "wizard-cancel" in trigger:
-        return False, "", True, ""
+        return False, "", True, "", dash.no_update
 
     # 2. Submission Logic (The actual 'Gobbling')
     if "wizard-submit" in trigger and contents and project_id:
@@ -98,9 +99,10 @@ def handle_wizard_logic(n_open, n_cancel, n_submit, contents, project_id, is_ope
             # Save to Silo
             new_filename = DataManager.save_dataframe(df, project_id, prefix="ingest")
             
-            return False, dash.no_update, True, "" # Close on success
+            # Close modal and redirect to work-logs
+            return False, dash.no_update, True, "", "/work-logs"
         except Exception as e:
-            return True, dbc.Alert(f"❌ Ingestion Failed: {e}", color="danger"), False, filename
+            return True, dbc.Alert(f"❌ Ingestion Failed: {e}", color="danger"), False, filename, dash.no_update
 
     # 3. Preview/Verification Logic
     if contents and project_id:
@@ -115,14 +117,14 @@ def handle_wizard_logic(n_open, n_cancel, n_submit, contents, project_id, is_ope
                 html.P(f"Target Project: {project_id}", className="mb-0")
             ], color="success")
             
-            return True, preview, False, f"📄 {filename}"
+            return True, preview, False, f"📄 {filename}", dash.no_update
         except Exception as e:
-            return True, dbc.Alert(f"❌ Error reading file: {e}", color="danger"), True, ""
+            return True, dbc.Alert(f"❌ Error reading file: {e}", color="danger"), True, "", dash.no_update
 
     if contents:
-        return True, html.P("Please select a project to continue.", className="text-warning"), True, f"📄 {filename}"
+        return True, html.P("Please select a project to continue.", className="text-warning"), True, f"📄 {filename}", dash.no_update
 
-    return is_open, dash.no_update, True, ""
+    return is_open, dash.no_update, True, "", dash.no_update
 
 # Note: The actual 'Saving' logic will be added in the next step to ensure 
 # the DataManager integration is clean.
