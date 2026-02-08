@@ -99,6 +99,8 @@ services:
     restart: always
     ports:
       - "8051:8050" # Map 8051 to internal 8050
+    volumes:
+      - ./data_analyzer/projects:/app/projects
 
   homepage:
     image: ghcr.io/gethomepage/homepage:latest
