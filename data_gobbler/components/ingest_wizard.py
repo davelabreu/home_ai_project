@@ -32,16 +32,27 @@ def render_ingest_wizard():
                 html.Div(id='wizard-file-info', className="text-muted small")
             ], className="mb-4"),
 
-            # Step 2: Project Selection
+            # Step 2: Project Selection & Hierarchy
             html.Div([
-                html.Label("Step 2: Assign to Project", className="fw-bold"),
+                html.Label("Step 2: Assign Context", className="fw-bold"),
                 dcc.Dropdown(
                     id='wizard-project-dropdown',
                     options=[{'label': p['name'], 'value': pid} for pid, p in projects.items()],
                     placeholder="Select a project...",
                     style={'color': 'black'}
                 ),
-                html.Div(id='wizard-project-info', className="mt-2 small italic")
+                html.Div(id='wizard-project-info', className="mt-2 mb-3"),
+                
+                dbc.Row([
+                    dbc.Col([
+                        html.Label("Subsystem", className="small fw-bold"),
+                        dbc.Input(id="wizard-subsystem", placeholder="e.g. Motor, Cooling...", size="sm"),
+                    ], width=6),
+                    dbc.Col([
+                        html.Label("Test / Session Name", className="small fw-bold"),
+                        dbc.Input(id="wizard-test", placeholder="e.g. Load_Test_01...", size="sm"),
+                    ], width=6),
+                ], className="g-2")
             ], className="mb-4"),
 
             # Step 3: Verification
@@ -69,10 +80,12 @@ def render_ingest_wizard():
      Input("wizard-upload", "contents"),
      Input("wizard-project-dropdown", "value")],
     [State("ingest-wizard-modal", "is_open"),
-     State("wizard-upload", "filename")],
+     State("wizard-upload", "filename"),
+     State("wizard-subsystem", "value"),
+     State("wizard-test", "value")],
     prevent_initial_call=True
 )
-def handle_wizard_logic(trigger_signal, n_cancel, n_submit, contents, project_id, is_open, filename):
+def handle_wizard_logic(trigger_signal, n_cancel, n_submit, contents, project_id, is_open, filename, sub, test_name):
     ctx = dash.callback_context
     if not ctx.triggered:
         return is_open, dash.no_update, True, "", dash.no_update, "", dash.no_update
@@ -81,6 +94,10 @@ def handle_wizard_logic(trigger_signal, n_cancel, n_submit, contents, project_id
     projects = DataManager.get_projects()
     project_info = ""
     
+    # Defaults for hierarchy
+    sub = sub if sub else "general"
+    test_name = test_name if test_name else "quick_dump"
+
     # Selected Project Display logic
     if project_id:
         p = projects.get(project_id, {})
@@ -106,11 +123,16 @@ def handle_wizard_logic(trigger_signal, n_cancel, n_submit, contents, project_id
             if template == 'encoder_quadrature':
                 df = DataProcessors.process_encoder_quadrature(df)
             
-            # Save to Silo
-            new_filename = DataManager.save_dataframe(df, project_id, prefix="ingest")
+            # Save to Silo with Hierarchy
+            new_filename = DataManager.save_dataframe(df, project_id, sub, test_name, prefix="ingest")
             
             # Record the last ingested file and redirect
-            ingest_record = {'project_id': project_id, 'filename': new_filename}
+            ingest_record = {
+                'project_id': project_id, 
+                'subsystem': sub,
+                'test': test_name,
+                'filename': new_filename
+            }
             return False, dash.no_update, True, "", "/work-logs", "", ingest_record
         except Exception as e:
             return True, dbc.Alert(f"❌ Ingestion Failed: {e}", color="danger"), False, filename, dash.no_update, project_info, dash.no_update
@@ -125,7 +147,7 @@ def handle_wizard_logic(trigger_signal, n_cancel, n_submit, contents, project_id
             preview = dbc.Alert([
                 html.H5("✅ Data Verified"),
                 html.P(f"Rows: {len(df)} | Columns: {', '.join(df.columns[:5])}..."),
-                html.P(f"Target Project: {project_id}", className="mb-0")
+                html.P(f"Context: {sub} / {test_name}", className="mb-0")
             ], color="success")
             
             return True, preview, False, f"📄 {filename}", dash.no_update, project_info, dash.no_update

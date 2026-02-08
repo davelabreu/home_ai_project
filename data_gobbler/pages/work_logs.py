@@ -21,14 +21,17 @@ def layout():
             ], width=12)
         ]),
 
-        # 1. TOP BAR (Global Controls)
+        # 1. DATA CONTEXT (Hierarchical Navigator)
         dbc.Row([
             dbc.Col([
                 dbc.Card([
+                    dbc.CardHeader([
+                        html.I(className="bi bi-sliders2 me-2"), "Data Context"
+                    ], className="fw-bold small"),
                     dbc.CardBody([
                         dbc.Row([
                             dbc.Col([
-                                html.Label("Active Project", className="small fw-bold mb-1"),
+                                html.Label("Project", className="small fw-bold mb-1"),
                                 dcc.Dropdown(
                                     id='log-project-selector',
                                     options=[{'label': p['name'], 'value': pid} for pid, p in log_projects.items()],
@@ -36,18 +39,31 @@ def layout():
                                     clearable=False,
                                     style={'color': 'black'}
                                 ),
-                            ], width=4),
+                            ], width=3),
+                            dbc.Col([
+                                html.Label("Subsystem", className="small fw-bold mb-1"),
+                                dcc.Dropdown(
+                                    id='log-subsystem-selector', 
+                                    placeholder="Select...",
+                                    style={'color': 'black'}
+                                ),
+                            ], width=3),
+                            dbc.Col([
+                                html.Label("Test / Session", className="small fw-bold mb-1"),
+                                dcc.Dropdown(
+                                    id='log-test-selector', 
+                                    placeholder="Select...",
+                                    style={'color': 'black'}
+                                ),
+                            ], width=3),
                             dbc.Col([
                                 html.Label("Data File", className="small fw-bold mb-1"),
                                 dcc.Dropdown(
                                     id='log-file-selector', 
-                                    placeholder="Select a file...",
+                                    placeholder="Select...",
                                     style={'color': 'black'}
                                 ),
-                            ], width=4),
-                            dbc.Col([
-                                html.Div(id="log-file-metadata", className="mt-4 small text-muted text-end")
-                            ], width=4)
+                            ], width=3),
                         ])
                     ])
                 ], className="mb-4 shadow-sm border-0", style={"background-color": "#1e1e1e"})
@@ -58,13 +74,17 @@ def layout():
         dbc.Row([
             dbc.Col([
                 html.Div(id="plot-canvas", children=[
-                    # We'll start with one default plot card
-                    render_plot_card("main-plot", title="Initial Analysis View")
+                    render_plot_card("main-plot", title="Analysis Canvas")
                 ])
             ], width=12)
         ]),
 
-        # 3. ADD PLOT BUTTON (FAB)
+        # 3. GLOBAL METADATA / STATS BAR
+        dbc.Row([
+            dbc.Col(html.Div(id="log-file-metadata", className="small text-muted mb-4"), width=12)
+        ]),
+
+        # 4. ADD PLOT BUTTON (FAB)
         html.Div([
             dbc.Button(
                 html.I(className="bi bi-plus-lg"),
@@ -77,69 +97,89 @@ def layout():
 
     ], fluid=True)
 
-# Callback: Auto-select ingested file
-# We use 'initial_duplicate' to allow allow_duplicate=True while still firing on load
+# --- Callbacks for Hierarchical Selection ---
+
 @callback(
     [Output('log-project-selector', 'value'),
-     Output('log-file-selector', 'options', allow_duplicate=True),
-     Output('log-file-selector', 'value', allow_duplicate=True)],
-    [Input('url', 'pathname'),
-     Input('last-ingested-file', 'data')],
-    prevent_initial_call='initial_duplicate'
+     Output('log-subsystem-selector', 'value'),
+     Output('log-test-selector', 'value'),
+     Output('log-file-selector', 'value')],
+    Input('last-ingested-file', 'data'),
+    prevent_initial_call=True
 )
-def auto_select_ingested_file(pathname, last_ingest):
-    if pathname == '/work-logs' and last_ingest and 'project_id' in last_ingest:
-        pid = last_ingest['project_id']
-        fname = last_ingest['filename']
-        files = DataManager.list_files(pid)
-        options = [{'label': f, 'value': f} for f in files]
-        return pid, options, fname
-    return dash.no_update, dash.no_update, dash.no_update
+def auto_select_full_context(last_ingest):
+    if last_ingest and 'project_id' in last_ingest:
+        return (
+            last_ingest['project_id'],
+            last_ingest.get('subsystem', 'general'),
+            last_ingest.get('test', 'quick_dump'),
+            last_ingest['filename']
+        )
+    return dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
-# --- Existing Callbacks ---
+@callback(
+    Output('log-subsystem-selector', 'options'),
+    Input('log-project-selector', 'value')
+)
+def update_subsystems(project_id):
+    if not project_id: return []
+    subs = DataManager.list_subsystems(project_id)
+    return [{'label': s, 'value': s} for s in subs]
+
+@callback(
+    Output('log-test-selector', 'options'),
+    [Input('log-project-selector', 'value'),
+     Input('log-subsystem-selector', 'value')]
+)
+def update_tests(project_id, subsystem):
+    if not project_id or not subsystem: return []
+    tests = DataManager.list_tests(project_id, subsystem)
+    return [{'label': t, 'value': t} for t in tests]
 
 @callback(
     Output('log-file-selector', 'options'),
-    Input('log-project-selector', 'value')
+    [Input('log-project-selector', 'value'),
+     Input('log-subsystem-selector', 'value'),
+     Input('log-test-selector', 'value')]
 )
-def update_file_dropdown(project_id):
-    if not project_id:
-        return []
-    files = DataManager.list_files(project_id)
+def update_files(project_id, subsystem, test):
+    if not project_id or not subsystem or not test: return []
+    files = DataManager.list_files(project_id, subsystem, test)
     return [{'label': f, 'value': f} for f in files]
 
-# Callback 1: Update Metadata (Static ID)
+# Callback 1: Update Metadata
 @callback(
     Output('log-file-metadata', 'children'),
     [Input('log-file-selector', 'value')],
-    [State('log-project-selector', 'value')]
+    [State('log-project-selector', 'value'),
+     State('log-subsystem-selector', 'value'),
+     State('log-test-selector', 'value')]
 )
-def update_metadata(filename, project_id):
-    if not filename or not project_id:
-        return "No file selected."
-    df = DataManager.load_dataframe(project_id, filename)
-    return f"Records: {len(df)} | Cols: {len(df.columns)}"
+def update_metadata(filename, project_id, subsystem, test):
+    if not filename: return ""
+    df = DataManager.load_dataframe(project_id, subsystem, test, filename)
+    return f"Loaded: {subsystem} / {test} / {filename} | Records: {len(df)} | Columns: {len(df.columns)}"
 
-# Callback 2: Update Individual Plots (MATCH Wildcard)
+# Callback 2: Update Individual Plots
 @callback(
     Output({'type': 'plot-graph', 'index': MATCH}, 'figure'),
     [Input('log-file-selector', 'value')],
     [State('log-project-selector', 'value'),
+     State('log-subsystem-selector', 'value'),
+     State('log-test-selector', 'value'),
      State({'type': 'plot-graph', 'index': MATCH}, 'id')]
 )
-def update_plots(filename, project_id, plot_id_obj):
-    if not filename or not project_id:
-        return dash.no_update
+def update_plots(filename, project_id, subsystem, test, plot_id_obj):
+    if not filename: return dash.no_update
     
-    df = DataManager.load_dataframe(project_id, filename)
+    df = DataManager.load_dataframe(project_id, subsystem, test, filename)
     projects = DataManager.get_projects()
     template = projects[project_id].get('template')
     
-    # Logic for individual cards
     if template == 'encoder_quadrature':
         fig = PlotTemplates.encoder_analysis_v6(df, title=f"Encoder Analysis")
     else:
         import plotly.express as px
-        fig = px.line(df, x=df.columns[0], y=df.columns[1:], title="Generic Line Plot", template="plotly")
+        fig = px.line(df, x=df.columns[0], y=df.columns[1:], title="Generic Analysis", template="plotly")
     
     return fig
