@@ -93,7 +93,7 @@ def update_main_viz(filename, project_id):
     else:
         # Default fallback plot
         import plotly.express as px
-        fig = px.line(df, x=df.columns[0], y=df.columns[1:], title=f"Generic Log: {filename}", template="plotly_dark")
+        fig = px.line(df, x=df.columns[0], y=df.columns[1:], title=f"Generic Log: {filename}", template="plotly")
     
     # 4. Generate Metadata
     metadata = [

@@ -66,7 +66,7 @@ class PlotTemplates:
         # 4. Styling & Layout
         fig.update_layout(
             height=1000,
-            template="plotly_dark",
+            template="plotly", # Switched to standard theme
             title_text=f"<b>{title}</b>",
             showlegend=True,
             margin=dict(t=100, l=50, r=50, b=50),
