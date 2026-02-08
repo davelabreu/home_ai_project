@@ -11,8 +11,7 @@ def render_inspector_panel():
     title="Plot Inspector",
     is_open=False,
     placement="end",
-    size="md",
-    style={"background-color": "#1a1a1a", "color": "white"}
+    style={"background-color": "#1a1a1a", "color": "white", "width": "400px"}
 )
 
 @callback(
