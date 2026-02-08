@@ -187,6 +187,96 @@ def get_local_system_info():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/jetson_gpu_info')
+def get_jetson_gpu_info():
+    """
+    Retrieves and returns GPU information from the Jetson using tegrastats.
+    """
+    if sys.platform.startswith('win'):
+        # On Windows, this is the PC dashboard, it should forward the request to the Jetson
+        if not MONITOR_TARGET_HOST:
+            return jsonify({'error': 'MONITOR_TARGET_HOST is not set for remote GPU info.'}), 400
+        
+        try:
+            remote_url = f"http://{MONITOR_TARGET_HOST}:{MONITOR_TARGET_PORT}/api/jetson_gpu_info"
+            app_logger.info(f"Forwarding GPU info request to Jetson: {remote_url}")
+            response = requests.get(remote_url)
+            response.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
+            return jsonify(response.json())
+        except requests.exceptions.RequestException as e:
+            app_logger.error(f"Error forwarding GPU info request to {MONITOR_TARGET_HOST}: {e}")
+            return jsonify({'error': f"Could not connect to remote host {MONITOR_TARGET_HOST} for GPU info: {e}"}), 500
+    
+    # Only execute tegrastats on Linux (Jetson)
+    try:
+        # Run tegrastats for a short duration to get a single snapshot
+        # --nosync avoids waiting for sync, --interval 100 gets 1 sample quickly
+        result = subprocess.run(['tegrastats', '--interval', '100', '--logfile', '/dev/stdout', '--nosync'], 
+                                capture_output=True, text=True, check=True, timeout=2)
+        output_lines = result.stdout.strip().split('\n')
+        
+        # The last line of tegrastats output usually contains the most recent data
+        last_line = output_lines[-1] if output_lines else ""
+        
+        gpu_info = {
+            'gpu_percent': None,
+            'emc_percent': None,
+            'gpu_temp_c': None,
+            'power_mw': None,
+            'ram_usage_mb': None,
+            'ram_total_mb': None,
+        }
+
+        # Regex patterns to extract information
+        # Example line: RAM 1148/7862MB (lfb 271x4MB) SWAP 0/3931MB (cached 0MB) CPU [0%@1224,0%@1224,0%@1224,0%@1224,0%@1224,0%@1224] EMC 0%@204 APE 150 BCPU@1200 GR3D@1224 NVJPG@100 NVDEC@100 NVENC@100 VIC@100 PVA@1150 DLA@100(active) POWER 1089mW (SID 0mW/538mW) VDD_GPU 100/100 VDD_CPU 100/100 VDD_SOC 100/100 VDD_DDR 100/100
+        
+        # GPU Usage (GR3D clock frequency - a proxy for usage, actual usage % is harder to get directly)
+        gr3d_match = re.search(r'GR3D@(\d+)', last_line)
+        if gr3d_match:
+            gpu_info['gpu_percent'] = int(gr3d_match.group(1)) # This is clock speed, not %
+
+        # EMC Usage (Memory Controller)
+        emc_match = re.search(r'EMC (\d+)%', last_line)
+        if emc_match:
+            gpu_info['emc_percent'] = int(emc_match.group(1))
+
+        # GPU Temperature (often in the form 'GPU@XX.XC' or 'TMON @XX.XC')
+        temp_match = re.search(r'GPU@(\d+\.?\d*)C', last_line)
+        if temp_match:
+            gpu_info['gpu_temp_c'] = float(temp_match.group(1))
+        else: # Try general thermal monitor if GPU specific isn't found
+            temp_match_general = re.search(r'TMON @(\d+\.?\d*)C', last_line)
+            if temp_match_general:
+                gpu_info['gpu_temp_c'] = float(temp_match_general.group(1))
+
+
+        # Power (POWER xxxmW)
+        power_match = re.search(r'POWER (\d+)mW', last_line)
+        if power_match:
+            gpu_info['power_mw'] = int(power_match.group(1))
+        
+        # RAM Usage (tegrastats reports it in 'RAM X/YMB')
+        ram_match = re.search(r'RAM (\d+)/(\d+)MB', last_line)
+        if ram_match:
+            gpu_info['ram_usage_mb'] = int(ram_match.group(1))
+            gpu_info['ram_total_mb'] = int(ram_match.group(2))
+
+        app_logger.info(f"Parsed GPU info: {gpu_info}")
+        return jsonify(gpu_info)
+
+    except subprocess.CalledProcessError as e:
+        app_logger.error(f"tegrastats command failed: {e.cmd} - {e.stderr}")
+        return jsonify({'error': f"tegrastats command failed: {e.stderr}"}), 500
+    except FileNotFoundError:
+        app_logger.error("'tegrastats' command not found. Is it installed and in PATH?")
+        return jsonify({'error': "'tegrastats' command not found. Ensure it's in the container's PATH."}), 500
+    except subprocess.TimeoutExpired:
+        app_logger.error("tegrastats command timed out.")
+        return jsonify({'error': "tegrastats command timed out. Jetson might be too busy."}), 500
+    except Exception as e:
+        app_logger.error(f"An unexpected error occurred during GPU info retrieval: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/remote_system_info')
 def get_remote_system_info():
     """

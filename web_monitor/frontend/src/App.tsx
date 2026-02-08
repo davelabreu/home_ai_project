@@ -6,6 +6,8 @@ import { useNetworkStatus } from './hooks/useNetworkStatus';
 import { useConfig } from './hooks/useConfig';
 import FaviconChanger from './components/FaviconChanger';
 import ChatCard from './components/ChatCard';
+import GpuInfoCard from './components/GpuInfoCard'; // Import GpuInfoCard
+import { useGpuInfo } from './hooks/useGpuInfo'; // Import useGpuInfo
 import { ThemeProvider } from './components/theme-provider'; // Import ThemeProvider
 import './index.css';
 
@@ -17,6 +19,7 @@ function App() {
   const { local: localSystem, remote: remoteSystem } = useSystemInfo();
   const { local: localNetwork, remote: remoteNetwork } = useNetworkStatus();
   const { monitor_target_host_set, monitorTargetHost, monitorTargetPort, loading: configLoading, error: configError } = useConfig();
+  const gpu = useGpuInfo(); // Call the useGpuInfo hook
   const [rebootMessage, setRebootMessage] = useState<string | null>(null);
   const [softRebootMessage, setSoftRebootMessage] = useState<string | null>(null); // New state for soft reboot message
 
@@ -129,6 +132,12 @@ function App() {
                     loading={remoteSystem.loading} 
                     onHardRebootClick={handleHardReboot} // Pass the new hard reboot handler
                     onSoftRebootClick={handleSoftReboot} // Pass the new soft reboot handler
+                  />
+                  <GpuInfoCard 
+                    title="Jetson GPU Status" 
+                    gpuInfo={gpu.gpuInfo} 
+                    error={gpu.error} 
+                    loading={gpu.loading} 
                   />
                   {rebootMessage && (
                     <p className={`text-center text-sm ${rebootMessage.includes("failed") ? "text-destructive" : "text-primary"} mt-2`}>
