@@ -4,7 +4,9 @@ import { Progress } from './ui/progress'; // Assuming this exists
 
 interface GpuInfoProps {
   gpuInfo: {
-    gpu_percent: number | null;
+    gpu_usage_percent: number | null;
+    gpu_clock_mhz: number | null;
+    gpu_percent: number | null; // Keep for fallback
     emc_percent: number | null;
     gpu_temp_c: number | null;
     power_mw: number | null;
@@ -56,23 +58,34 @@ const GpuInfoCard: React.FC<GpuInfoProps> = ({ gpuInfo, loading, error, title })
     );
   }
 
+  // Determine usage and clock with fallbacks
+  const usage = gpuInfo.gpu_usage_percent !== undefined ? gpuInfo.gpu_usage_percent : gpuInfo.gpu_percent;
+  const clock = gpuInfo.gpu_clock_mhz;
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* GPU Clock/Usage (using percent for now, will clarify if it's clock or actual %) */}
-        {gpuInfo.gpu_percent !== null && (
+        {/* GPU Usage */}
+        {usage !== null && (
+          <div>
+            <div className="flex justify-between text-sm">
+              <span>GPU Usage</span>
+              <span>{usage}%</span>
+            </div>
+            <Progress value={usage} className="h-2" />
+          </div>
+        )}
+
+        {/* GPU Clock */}
+        {clock !== null && clock > 0 && (
           <div>
             <div className="flex justify-between text-sm">
               <span>GPU Clock</span>
-              <span>{gpuInfo.gpu_percent} MHz</span>
+              <span>{clock} MHz</span>
             </div>
-            <Progress value={Math.min(gpuInfo.gpu_percent / 1500 * 100, 100)} className="h-2" /> {/* Assuming max clock ~1500MHz for a rough visual */}
-            <p className="text-xs text-muted-foreground mt-1">
-              (This is current clock speed, not direct usage %)
-            </p>
           </div>
         )}
 

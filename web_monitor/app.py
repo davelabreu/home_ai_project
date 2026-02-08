@@ -113,9 +113,18 @@ def get_local_network_status():
             try:
                 jetson_ip_result = subprocess.run(['hostname', '-I'], capture_output=True, text=True, check=True)
                 jetson_ip = jetson_ip_result.stdout.split()[0]
-                jetson_mac_result = subprocess.run(['cat', '/sys/class/net/eth0/address'], capture_output=True, text=True, check=True)
+                
+                # Dynamically find the first non-lo network interface for MAC retrieval
+                interfaces = os.listdir('/sys/class/net/')
+                primary_iface = 'eth0' # Default
+                for iface in interfaces:
+                    if iface != 'lo' and not iface.startswith('br-') and not iface.startswith('docker'):
+                        primary_iface = iface
+                        break
+                
+                jetson_mac_result = subprocess.run(['cat', f'/sys/class/net/{primary_iface}/address'], capture_output=True, text=True, check=True)
                 jetson_mac = jetson_mac_result.stdout.strip()
-                devices.append({'ip': jetson_ip, 'mac': jetson_mac, 'interface': 'self (Jetson)'})
+                devices.append({'ip': jetson_ip, 'mac': jetson_mac, 'interface': f'self (Jetson - {primary_iface})'})
             except Exception as e:
                 app.logger.warning(f"Could not determine Jetson's own IP/MAC: {e}")
 
@@ -221,16 +230,41 @@ def get_jetson_gpu_info():
             with jtop() as jetson:
                 if jetson.ok():
                     stats = jetson.stats
-                    # Map jtop stats to our expected format
-                    return jsonify({
-                        'gpu_percent': stats.get('GPU', 0),
-                        'emc_percent': stats.get('EMC', 0),
-                        'gpu_temp_c': stats.get('temp', {}).get('gpu', 0),
-                        'power_mw': stats.get('power', {}).get('tot', {}).get('cur', 0),
+                    app_logger.info(f"jtop raw stats keys: {stats.keys()}")
+                    
+                    # jtop stats keys vary by version. We'll try common locations.
+                    gpu_usage = stats.get('GPU', 0)
+                    if isinstance(gpu_usage, dict): gpu_usage = gpu_usage.get('val', 0)
+                    
+                    # GPU Frequency (MHz)
+                    gpu_clock = stats.get('GR3D_FREQ', 0)
+                    if isinstance(gpu_clock, dict): gpu_clock = gpu_clock.get('val', 0)
+                    
+                    emc_usage = stats.get('EMC', 0)
+                    if isinstance(emc_usage, dict): emc_usage = emc_usage.get('val', 0)
+                    
+                    # Temperature can be under 'temp' or 'temperature'
+                    temp_dict = stats.get('temp', stats.get('temperature', {}))
+                    gpu_temp = temp_dict.get('gpu', temp_dict.get('GPU', 0))
+                    
+                    # Power consumption - look for 'tot' or 'POM_5V_IN' etc.
+                    power_dict = stats.get('power', {})
+                    tot_power = power_dict.get('tot', power_dict.get('main', {}))
+                    power_mw = tot_power.get('cur', 0) if isinstance(tot_power, dict) else 0
+                    
+                    response_data = {
+                        'gpu_usage_percent': gpu_usage,
+                        'gpu_clock_mhz': gpu_clock,
+                        'gpu_percent': gpu_usage, # Keep for backward compatibility
+                        'emc_percent': emc_usage,
+                        'gpu_temp_c': gpu_temp,
+                        'power_mw': power_mw,
                         'ram_usage_mb': stats.get('RAM', 0),
                         'ram_total_mb': stats.get('tot_ram', 0),
                         'jtop_active': True
-                    })
+                    }
+                    app_logger.info(f"jtop processed response: {response_data}")
+                    return jsonify(response_data)
         except Exception as e:
             app_logger.warning(f"jtop collection failed, falling back to tegrastats: {e}")
 

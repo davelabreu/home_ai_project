@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { useConfig } from './useConfig'; // Assuming useConfig exists to get MONITOR_TARGET_HOST
 
 interface GpuInfo {
-  gpu_percent: number | null; // Clock speed as a proxy for usage, or actual % if available
+  gpu_usage_percent: number | null;
+  gpu_clock_mhz: number | null;
+  gpu_percent: number | null; // Clock speed or usage as proxy
   emc_percent: number | null; // Memory Controller usage %
   gpu_temp_c: number | null; // GPU temperature in Celsius
   power_mw: number | null; // Power consumption in mW
