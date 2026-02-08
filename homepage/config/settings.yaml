@@ -2,7 +2,9 @@ allowed_hosts: [ "192.168.1.11", "192.168.1.11:3000", "192.168.1.16", "192.168.1
 
 title: Home AI Dashboard
 background:
-  image: https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=2070
+  image: https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=1974&auto=format&fit=crop # Modern dark gradient
+  # To use a custom image, drop it in homepage/images/ and use:
+  # image: /images/your-image.jpg
 
 layout:
   Core AI:
