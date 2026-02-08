@@ -41,6 +41,16 @@ To create a robust, simple home automation and AI companion system. The Jetson s
 - [ ] Configure Reverse Proxy for secure external access.
 - [ ] Automate routine maintenance tasks.
 
+## Milestones
+
+### [v0.1.0] - 2026-02-08
+**Stable Dashboard Baseline**
+- **Ambidextrous Architecture**: Unified code for Windows (PC) and Linux/Docker (Jetson).
+- **Hybrid Network Monitor**: Instant device listing via ARP cache with background "fleshing out" via Nmap and DNS.
+- **Hardware Integration**: Real-time Jetson stats (GPU, Temp, Power) via `jtop`.
+- **Service Management**: Full Docker container control (List/Restart) with self-restart safety logic.
+- **Remote Control**: Soft and Hard reboot capabilities for the Jetson host.
+
 ## Security Considerations
 *   Firewall rules on all devices.
 *   Strong password policies and SSH key management.

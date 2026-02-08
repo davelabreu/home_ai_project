@@ -124,6 +124,15 @@ A utility script for command-line interaction with Ollama.
 *   **Configuration**: Uses `OLLAMA_HOST` environment variable, defaulting to `http://localhost:11434`.
 *   **Dependencies**: `requests` (Python).
 
+## Project Milestones
+
+### [v0.1.0] - 2026-02-08: Stable Dashboard Release
+- **Ambidextrous Architecture**: PC (Windows) management vs Jetson (Linux) control.
+- **Hybrid Network Monitor**: Fast ARP status + Background Deep Scan (Nmap/DNS).
+- **Jetson Hardware Metrics**: Real-time integration via `jtop`.
+- **Service Management**: Docker container control and self-restart safety.
+- **System Control**: Remote reboot (Soft/Hard) via `dbus-send`.
+
 ## General Project Conventions
 
 *   **Virtual Environments**: Python dependencies are managed using virtual environments (`.venv/`) within each component directory.
