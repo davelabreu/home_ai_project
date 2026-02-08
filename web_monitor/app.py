@@ -217,6 +217,7 @@ def get_jetson_gpu_info():
         
         # The last line of tegrastats output usually contains the most recent data
         last_line = output_lines[-1] if output_lines else ""
+        app_logger.info(f"Raw tegrastats last_line for parsing: '{last_line}'")
         
         gpu_info = {
             'gpu_percent': None,
