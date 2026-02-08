@@ -3,4 +3,3 @@ psutil
 requests
 python-dotenv
 Flask-Cors
-paramiko
