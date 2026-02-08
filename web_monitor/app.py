@@ -284,10 +284,10 @@ def command_reboot():
 
                                                                  stdout=subprocess.DEVNULL,
 
-                                                                 stderr=subprocess.DEVNULL)
-
-    except Exception as e:
-
+                                                                                                                  stderr=subprocess.DEVNULL)
+                                                                                                 
+                                                                         return jsonify({'status': 'success', 'message': 'System is rebooting.'}), 200 # <-- Re-inserting this line
+                                                                     except Exception as e:
         app.logger.error(f"An unexpected error occurred while initiating reboot: {e}")
 
         return jsonify({'status': 'error', 'message': f'An unexpected error occurred: {str(e)}'}), 500
