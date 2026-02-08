@@ -116,10 +116,9 @@ const ChatCard: React.FC = () => {
                 handleSendMessage();
               }
             }}
-            disabled={isSending || isChatDisabled}
             className="flex-1"
           />
-          <Button onClick={handleSendMessage} disabled={isSending || isChatDisabled}>
+          <Button onClick={handleSendMessage}>
             {isSending ? 'Sending...' : 'Send'}
           </Button>
         </div>
