@@ -64,7 +64,7 @@ const ChatCard: React.FC = () => {
 
   // Chat is disabled if config is still loading or if there's a config error for the remote host.
   // It is NOT disabled if monitorTargetHost is null (i.e., when on the Jetson's local dashboard).
-  const isChatDisabled = configLoading || (monitor_target_host_set && configError !== null);
+  const isChatDisabled = isSending || configLoading;
 
   return (
     <Card className="col-span-1 md:col-span-2 lg:col-span-1 h-[500px] flex flex-col">
