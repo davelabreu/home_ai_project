@@ -207,10 +207,10 @@ def get_local_system_info():
 def get_jetson_gpu_info():
     """
     Retrieves and returns GPU and system information from the Jetson.
-    Uses jtop if available, otherwise falls back to tegrastats.
+    Uses the scripts/get_stats.py helper script for reliable data collection.
     """
     if sys.platform.startswith('win'):
-        # On Windows, this is the PC dashboard, it should forward the request to the Jetson
+        # On Windows, forward the request to the Jetson
         if not MONITOR_TARGET_HOST:
             return jsonify({'error': 'MONITOR_TARGET_HOST is not set for remote GPU info.'}), 400
         
@@ -224,95 +224,39 @@ def get_jetson_gpu_info():
             app_logger.error(f"Error forwarding GPU info request to {MONITOR_TARGET_HOST}: {e}")
             return jsonify({'error': f"Could not connect to remote host {MONITOR_TARGET_HOST} for GPU info: {e}"}), 500
     
-    # Attempt to use jtop for simplified collection
-    if JTOP_AVAILABLE:
-        try:
-            with jtop() as jetson:
-                if jetson.ok():
-                    stats = jetson.stats
-                    app_logger.info(f"jtop raw stats keys: {stats.keys()}")
-                    
-                    # jtop stats keys vary by version. We'll try common locations.
-                    gpu_usage = stats.get('GPU', 0)
-                    if isinstance(gpu_usage, dict): gpu_usage = gpu_usage.get('val', 0)
-                    
-                    # GPU Frequency (MHz)
-                    gpu_clock = stats.get('GR3D_FREQ', 0)
-                    if isinstance(gpu_clock, dict): gpu_clock = gpu_clock.get('val', 0)
-                    
-                    emc_usage = stats.get('EMC', 0)
-                    if isinstance(emc_usage, dict): emc_usage = emc_usage.get('val', 0)
-                    
-                    # Temperature can be under 'temp' or 'temperature'
-                    temp_dict = stats.get('temp', stats.get('temperature', {}))
-                    gpu_temp = temp_dict.get('gpu', temp_dict.get('GPU', 0))
-                    
-                    # Power consumption - look for 'tot' or 'POM_5V_IN' etc.
-                    power_dict = stats.get('power', {})
-                    tot_power = power_dict.get('tot', power_dict.get('main', {}))
-                    power_mw = tot_power.get('cur', 0) if isinstance(tot_power, dict) else 0
-                    
-                    response_data = {
-                        'gpu_usage_percent': gpu_usage,
-                        'gpu_clock_mhz': gpu_clock,
-                        'gpu_percent': gpu_usage, # Keep for backward compatibility
-                        'emc_percent': emc_usage,
-                        'gpu_temp_c': gpu_temp,
-                        'power_mw': power_mw,
-                        'ram_usage_mb': stats.get('RAM', 0),
-                        'ram_total_mb': stats.get('tot_ram', 0),
-                        'jtop_active': True
-                    }
-                    app_logger.info(f"jtop processed response: {response_data}")
-                    return jsonify(response_data)
-        except Exception as e:
-            app_logger.warning(f"jtop collection failed, falling back to tegrastats: {e}")
-
-    # Fallback to tegrastats logic if jtop is unavailable or fails
+    # Running on Jetson - use the helper script
     try:
-        app_logger.info("Executing tegrastats command...")
-        result = subprocess.run(['tegrastats', '--interval', '100', '--logfile', '/dev/stdout'],
-                                capture_output=True, text=True, check=True, timeout=5, stderr=subprocess.STDOUT)
+        # Resolve path to the script relative to the project root
+        # Based on structure: home_ai_project/web_monitor/app.py -> home_ai_project/scripts/get_stats.py
+        project_root = os.path.abspath(os.path.join(basedir, '..'))
+        script_path = os.path.join(project_root, 'scripts', 'get_stats.py')
         
-        output_lines = result.stdout.strip().split('\n')
-        last_line = output_lines[-1] if output_lines else ""
+        app_logger.info(f"Executing stats helper script: {script_path}")
+        result = subprocess.run(['python3', script_path], capture_output=True, text=True, check=True)
+        stats = json.loads(result.stdout)
         
-        gpu_info = {
-            'gpu_percent': None,
-            'emc_percent': None,
-            'gpu_temp_c': None,
-            'power_mw': None,
-            'ram_usage_mb': None,
-            'ram_total_mb': None,
-            'jtop_active': False
+        # Map the helper script's output to the frontend's expected format
+        # RAM usage from script is a fraction (e.g. 0.62), we need to handle total ram separately
+        # We'll use psutil for total ram to calculate the MB usage correctly
+        total_ram_gb = psutil.virtual_memory().total / (1024**3)
+        
+        response_data = {
+            'gpu_usage_percent': stats.get('GPU', 0),
+            'gpu_clock_mhz': stats.get('GR3D_FREQ', 0), # Note: If your script doesn't output this yet, it's 0
+            'gpu_percent': stats.get('GPU', 0),
+            'emc_percent': stats.get('EMC', 0),
+            'gpu_temp_c': stats.get('Temp gpu', 0),
+            'power_mw': stats.get('Power TOT', 0),
+            'ram_usage_mb': round(stats.get('RAM', 0) * total_ram_gb * 1024, 2),
+            'ram_total_mb': round(total_ram_gb * 1024, 2),
+            'jtop_active': True,
+            'raw_stats': stats # Optional: include for debugging
         }
-
-        # Regex parsing (omitted for brevity in this replace call, but keeping original logic)
-        gr3d_percent_match = re.search(r'GR3D_FREQ (\d+)%', last_line)
-        if gr3d_percent_match:
-            gpu_info['gpu_percent'] = int(gr3d_percent_match.group(1))
-
-        emc_match = re.search(r'EMC_FREQ (\d+)%', last_line)
-        if emc_match:
-            gpu_info['emc_percent'] = int(emc_match.group(1))
-
-        temp_match = re.search(r'gpu@(\d+\.?\d*)C', last_line)
-        if temp_match:
-            gpu_info['gpu_temp_c'] = float(temp_match.group(1))
-
-        power_match = re.search(r'VDD_IN (\d+)mW', last_line)
-        if power_match:
-            gpu_info['power_mw'] = int(power_match.group(1))
         
-        ram_match = re.search(r'RAM (\d+)/(\d+)MB', last_line)
-        if ram_match:
-            gpu_info['ram_usage_mb'] = int(ram_match.group(1))
-            gpu_info['ram_total_mb'] = int(ram_match.group(2))
-
-        return jsonify(gpu_info)
+        return jsonify(response_data)
 
     except Exception as e:
-        app_logger.error(f"Failed to retrieve GPU info: {e}")
+        app_logger.error(f"Failed to retrieve GPU info via helper script: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/remote_system_info')
