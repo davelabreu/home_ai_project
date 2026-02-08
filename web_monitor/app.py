@@ -10,6 +10,62 @@ import time # Import time for sleep
 import json # Import json
 from dotenv import load_dotenv # Import load_dotenv
 from flask_cors import CORS # Import CORS
+import paramiko # Import paramiko for SSH communication
+import logging # Import logging for more detailed SSH logs
+
+# Configure Paramiko logging (optional, but useful for debugging)
+logging.getLogger("paramiko").setLevel(logging.WARNING)
+
+def execute_ssh_command(hostname, username, private_key_path, command):
+    """
+    Executes a command on a remote host via SSH.
+    """
+    try:
+        client = paramiko.SSHClient()
+        client.load_system_host_keys()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy()) # AutoAddPolicy is insecure for production
+        
+        # Load private key
+        private_key = paramiko.RSAKey.from_private_key_file(private_key_path)
+        
+        app.logger.info(f"Attempting SSH connection to {username}@{hostname} with key {private_key_path}")
+        client.connect(hostname=hostname, username=username, pkey=private_key)
+        
+        app.logger.info(f"Executing command via SSH: {command}")
+        stdin, stdout, stderr = client.exec_command(command)
+        
+        # Read output
+        output = stdout.read().decode().strip()
+        error = stderr.read().decode().strip()
+        
+        if output:
+            app.logger.info(f"SSH stdout: {output}")
+        if error:
+            app.logger.error(f"SSH stderr: {error}")
+            
+        return output, error
+        
+    except paramiko.AuthenticationException:
+        app.logger.error("SSH Authentication failed. Check username and private key.")
+        return "", "Authentication failed."
+    except paramiko.SSHException as e:
+        app.logger.error(f"Could not establish SSH connection: {e}")
+        return "", f"SSH connection error: {e}"
+    except Exception as e:
+        app.logger.error(f"An unexpected error occurred during SSH command execution: {e}")
+        return "", f"Unexpected error: {e}"
+    finally:
+        if 'client' in locals() and client:
+            client.close()
+
+# Assuming the Jetson's IP address is known from MONITOR_TARGET_HOST or fixed
+# For simplicity, we'll use MONITOR_TARGET_HOST for the SSH target.
+SSH_TARGET_HOST = os.environ.get('MONITOR_TARGET_HOST', '127.0.0.1') # Default to localhost if not set
+SSH_USERNAME = os.environ.get('SSH_USERNAME')
+SSH_PRIVATE_KEY_PATH = os.environ.get('SSH_PRIVATE_KEY_PATH')
+
+if not SSH_USERNAME or not SSH_PRIVATE_KEY_PATH:
+    app.logger.warning("SSH_USERNAME or SSH_PRIVATE_KEY_PATH environment variables are not set. SSH commands will not work.")
 
 # Load environment variables from .env file
 # This should be called as early as possible.
@@ -230,9 +286,9 @@ def get_config():
 
 from flask import request # Import request for handling POST data
 
-@app.route('/api/command/hard_reboot', methods=['POST'])
-def command_hard_reboot():
-    app.logger.info("Received request to hard reboot system.")
+@app.route('/api/command/reboot', methods=['POST'])
+def command_reboot():
+    app.logger.info("Received request to reboot system.")
     try:
         # Sends a signal to the host systemd via the mounted D-Bus
         cmd = [
@@ -247,46 +303,46 @@ def command_hard_reboot():
                          stderr=subprocess.DEVNULL)
         
         return jsonify({'status': 'success', 'message': 'System is rebooting.'}), 200
-        
     except Exception as e:
-        
         app.logger.error(f"An unexpected error occurred while initiating reboot: {e}")
-
         return jsonify({'status': 'error', 'message': f'An unexpected error occurred: {str(e)}'}), 500
 
-
-
-@app.route('/api/command/soft_reboot', methods=['POST'])
-def command_soft_reboot():
-    app.logger.info("Received request to soft reboot (container restart).")
+@app.route('/api/command/host_hard_reboot', methods=['POST'])
+def command_host_hard_reboot():
+    app.logger.info("Received request to hard reboot Jetson host via SSH.")
+    if not SSH_USERNAME or not SSH_PRIVATE_KEY_PATH:
+        return jsonify({'status': 'error', 'message': 'SSH credentials not configured.'}), 500
+    
     try:
-        # Construct the path to deploy.sh relative to the current script
-        deploy_script_path = os.path.join(basedir, '..', '..', 'deploy.sh')
-        
-        # Execute the deploy.sh script in a detached process, capturing stdout/stderr
-        # We use setsid to run the script in a new session, completely detaching it.
-        # This prevents the Flask app from waiting for the script to finish or hanging.
-        process = subprocess.Popen(['setsid', 'bash', deploy_script_path],
-                                   cwd=os.path.join(basedir, '..', '..'),
-                                   stdout=subprocess.PIPE, # Capture stdout
-                                   stderr=subprocess.PIPE, # Capture stderr
-                                   text=True) # Decode output as text
-
-        # Log that the process has been launched. We won't wait for its completion here.
-        app.logger.info(f"Soft reboot script '{deploy_script_path}' launched as detached process PID: {process.pid}")
-        
-        # We can't immediately return stdout/stderr as the script runs in background.
-        # For now, just confirm launch.
-        return jsonify({'status': 'success', 'message': 'Container soft reboot initiated. Check server logs for script output.'}), 200
-
+        # Note: 'sudo reboot' requires the SSH user to have NOPASSWD for reboot in sudoers.
+        output, error = execute_ssh_command(SSH_TARGET_HOST, SSH_USERNAME, SSH_PRIVATE_KEY_PATH, "sudo reboot")
+        if error:
+            return jsonify({'status': 'error', 'message': f'SSH command failed: {error}'}), 500
+        return jsonify({'status': 'success', 'message': 'Jetson host hard reboot initiated via SSH.', 'output': output}), 200
     except Exception as e:
-
-        app.logger.error(f"An unexpected error occurred while initiating soft reboot: {e}")
-
+        app.logger.error(f"An unexpected error occurred while initiating SSH hard reboot: {e}")
         return jsonify({'status': 'error', 'message': f'An unexpected error occurred: {str(e)}'}), 500
 
-
-
+@app.route('/api/command/host_soft_reboot', methods=['POST'])
+def command_host_soft_reboot():
+    app.logger.info("Received request to soft reboot (container restart) Jetson host via SSH.")
+    if not SSH_USERNAME or not SSH_PRIVATE_KEY_PATH:
+        return jsonify({'status': 'error', 'message': 'SSH credentials not configured.'}), 500
+    
+    try:
+        deploy_script_path_on_host = "/home/abrooski/projects/dev/2.personal/home_ai_project/deploy.sh"
+        # Note: 'sudo bash' or 'sudo /path/to/script' requires NOPASSWD for that command in sudoers.
+        # It's better to ensure deploy.sh has execute permissions and directly call it with sudo.
+        # Also, we need to cd into the project directory first for deploy.sh to work correctly.
+        command = f"cd /home/abrooski/projects/dev/2.personal/home_ai_project && sudo bash {deploy_script_path_on_host}"
+        
+        output, error = execute_ssh_command(SSH_TARGET_HOST, SSH_USERNAME, SSH_PRIVATE_KEY_PATH, command)
+        if error:
+            return jsonify({'status': 'error', 'message': f'SSH command failed: {error}'}), 500
+        return jsonify({'status': 'success', 'message': 'Jetson host container soft reboot initiated via SSH.', 'output': output}), 200
+    except Exception as e:
+        app.logger.error(f"An unexpected error occurred while initiating SSH soft reboot: {e}")
+        return jsonify({'status': 'error', 'message': f'An unexpected error occurred: {str(e)}'}), 500
 
 
 @app.route('/api/chat', methods=['POST'])

@@ -34,7 +34,7 @@ function App() {
 
     setRebootMessage(`Attempting to hard reboot remote host (${monitorTargetHost}:${monitorTargetPort})...`);
     try {
-      const response = await fetch(`http://${monitorTargetHost}:${monitorTargetPort}/api/command/hard_reboot`, { method: 'POST' });
+      const response = await fetch(`http://${monitorTargetHost}:${monitorTargetPort}/api/command/host_hard_reboot`, { method: 'POST' });
       const data = await response.json();
 
       if (response.ok) {
@@ -59,7 +59,7 @@ function App() {
 
     setSoftRebootMessage(`Attempting to soft reboot remote host (${monitorTargetHost}:${monitorTargetPort})...`);
     try {
-      const response = await fetch(`http://${monitorTargetHost}:${monitorTargetPort}/api/command/soft_reboot`, { method: 'POST' });
+      const response = await fetch(`http://${monitorTargetHost}:${monitorTargetPort}/api/command/host_soft_reboot`, { method: 'POST' });
       const data = await response.json();
 
       if (response.ok) {
