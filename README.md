@@ -41,14 +41,21 @@ To create a robust, simple home automation and AI companion system. The Jetson s
 - [x] Configure `services.yaml` and `widgets.yaml` for Homepage integration.
 - [x] Integrate **AI Workbench** (Data Analyzer) with real-time Netdata metrics.
 
-### Phase 4: Advanced Analytics & Orchestration
-- [ ] Transition AI Workbench to Modular Architecture (External Repo).
-- [ ] Implement data selection and historical reload in AI Workbench.
+### Phase 4: Advanced Analytics & Orchestration (In Progress)
+- [x] Transition AI Workbench to Modular Architecture (External Repo structure).
+- [x] Implement deep hierarchical data storage (Subsystem/Test).
+- [x] Create "One-Click Ingest" workflow with auto-plotting.
 - [ ] Develop custom visualization templates for specific log types.
 - [ ] Integrate lightweight LLM for automated data parsing/organization.
 - [ ] Set up Wake-on-LAN (WoL) for Main PC integration.
 
 ## Milestones
+
+### [v0.4.1] - 2026-02-08
+**Hierarchical Workbench Milestone**
+- **Deep Context**: Added Subsystem -> Test -> File organization.
+- **Split-Pane UI**: Modern Left/Right sidebar layout for maximum plotting space.
+- **Auto-Ingest**: Fixed race conditions for instant data visualization.
 
 ### [v0.2.0] - 2026-02-08
 **AI Workbench & Infrastructure Milestone**

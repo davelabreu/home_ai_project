@@ -138,6 +138,11 @@ Advanced integration of Jetson-specific hardware stats (CPU load, GPU temperatur
 
 ## Project Milestones
 
+### [v0.4.1] - 2026-02-08: Hierarchical Data & Split-Pane UI
+- **Data Context**: Implemented deep Project -> Subsystem -> Test -> File organization.
+- **Modern UI**: Fixed Left Sidebar, Context Top-Bar, and Right Inspector panel.
+- **Workflow**: Seamless "Drop-to-Plot" automation with auto-selection.
+
 ### [v0.2.0] - 2026-02-08: AI Workbench & Infrastructure Milestone
 - **Infrastructure Overhaul**: Deployed Netdata and Homepage as sidecars.
 - **AI Workbench Launch**: Refactored Data Analyzer into a project-based analytics platform.

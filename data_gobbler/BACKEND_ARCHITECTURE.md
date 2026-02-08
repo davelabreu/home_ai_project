@@ -30,8 +30,19 @@ When multiple callbacks target the same output (like the file selector), we use 
 ```text
 data_gobbler/
 ├── projects/
-│   ├── home_jetson/      # Siloed CSVs
-│   └── encoder_analysis/ # Processed Quadrature data
+│   ├── home_jetson/      
+│   │   ├── general/
+│   │   │   ├── quick_dump/
+│   │   │   │   └── ingest_YYYY-MM-DD_HH-MM.csv
+│   └── encoder_analysis/ 
+│       ├── motor_controller/
+│       │   ├── slip_test_01/
+│       │   │   └── ingest_....csv
 ├── projects.json         # Project Registry (Metadata)
-└── templates/            # (Future) Saved JSON plot configurations
 ```
+
+## 🔄 5. Hierarchical Auto-Selection Pattern
+To support "One-Click Ingest & View" with nested dropdowns, we use a specific callback pattern:
+1.  **Ingestion**: Saves file to nested path and records the full context (`project_id`, `subsystem`, `test`, `filename`) in `last-ingested-file` (dcc.Store).
+2.  **Redirection**: App navigates to `/work-logs`.
+3.  **Deep Force Update**: The `auto_select_full_context` callback fires. Critically, it returns **BOTH** the values (`value=...`) **AND** the options (`options=[...]`) for every dropdown level simultaneously. This prevents "Race Conditions" where a dropdown rejects a value because its options haven't loaded yet.
