@@ -16,6 +16,14 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 app_logger = logging.getLogger(__name__)
 
 try:
+    import docker
+    DOCKER_AVAILABLE = True
+    docker_client = docker.from_env()
+except Exception as e:
+    DOCKER_AVAILABLE = False
+    app_logger.warning(f"Docker client could not be initialized: {e}")
+
+try:
     from jtop import jtop
     JTOP_AVAILABLE = True
 except ImportError:
@@ -305,6 +313,68 @@ def deploy_action(action_name):
     """
     app.logger.info(f"Received request to deploy action: {action_name}")
     return jsonify({'status': 'success', 'message': f'Deployment action "{action_name}" received and will be processed.'})
+
+@app.route('/api/docker_services', methods=['GET'])
+def get_docker_services():
+    """
+    Returns a list of running Docker containers and their status.
+    Active only on non-Windows (Jetson) hosts.
+    """
+    if sys.platform.startswith('win'):
+        if not MONITOR_TARGET_HOST:
+            return jsonify({'error': 'MONITOR_TARGET_HOST not set'}), 400
+        try:
+            response = requests.get(f"http://{MONITOR_TARGET_HOST}:{MONITOR_TARGET_PORT}/api/docker_services")
+            return jsonify(response.json()), response.status_code
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    if not DOCKER_AVAILABLE:
+        return jsonify({'error': 'Docker integration not available in this container.'}), 500
+
+    try:
+        containers = docker_client.containers.list(all=True)
+        # We only care about containers related to our project
+        # We'll filter for common names or just show everything to be safe
+        services = []
+        for container in containers:
+            services.append({
+                'name': container.name,
+                'status': container.status,
+                'image': container.image.tags[0] if container.image.tags else 'unknown',
+                'id': container.short_id
+            })
+        return jsonify(services)
+    except Exception as e:
+        app_logger.error(f"Error fetching docker services: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/docker_services/restart', methods=['POST'])
+def restart_docker_service():
+    """
+    Restarts a specific Docker container by name.
+    """
+    data = request.json
+    service_name = data.get('name')
+
+    if not service_name:
+        return jsonify({'error': 'Service name required'}), 400
+
+    if sys.platform.startswith('win'):
+        try:
+            response = requests.post(f"http://{MONITOR_TARGET_HOST}:{MONITOR_TARGET_PORT}/api/docker_services/restart", json={'name': service_name})
+            return jsonify(response.json()), response.status_code
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    try:
+        container = docker_client.containers.get(service_name)
+        container.restart()
+        app_logger.info(f"Restarted container: {service_name}")
+        return jsonify({'message': f"Service {service_name} restarted successfully."})
+    except Exception as e:
+        app_logger.error(f"Failed to restart container {service_name}: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/config')
 def get_config():

@@ -11,6 +11,7 @@ The `home_ai_project` is a home automation and AI companion system designed to l
 *   **Simplicity First**: Jetson integration and dashboard features should be implemented as simply as possible. Avoid over-engineering or unnecessary layers of abstraction.
 *   **Leverage Open Source**: Use established libraries like `jetson-stats` (jtop) to simplify data collection from NVIDIA hardware, rather than manually parsing system logs or command output.
 *   **Low Complexity Dashboard**: The user interface should be clean, functional, and easy to maintain. We can take inspiration from projects like `jetson-stats-grafana-dashboard` for metrics and layout without necessarily adopting their entire stack (e.g., Prometheus/Grafana).
+*   **Docker-Centric Management**: Treat `docker-compose.yml` as the single source of truth for the Jetson's state. All services (Dashboard, Ollama, Analyzer, Agents) should be managed as Docker containers via the unified Service Manager panel.
 *   **Direct Communication**: Use straightforward HTTP calls and system commands (`subprocess`, `dbus-send`) rather than complex orchestration frameworks where possible.
 
 ## Key Hardware & Network Configuration

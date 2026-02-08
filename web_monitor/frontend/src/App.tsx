@@ -8,6 +8,7 @@ import FaviconChanger from './components/FaviconChanger';
 import ChatCard from './components/ChatCard';
 import GpuInfoCard from './components/GpuInfoCard'; // Import GpuInfoCard
 import { useGpuInfo } from './hooks/useGpuInfo'; // Import useGpuInfo
+import DockerServiceManager from './components/DockerServiceManager'; // Import DockerServiceManager
 import { ThemeProvider } from './components/theme-provider'; // Import ThemeProvider
 import './index.css';
 
@@ -162,6 +163,11 @@ function App() {
                   error={remoteNetwork.error} 
                   loading={remoteNetwork.loading} 
                 />
+              )}
+
+              {/* Docker Service Manager */}
+              {(isJetsonApp || monitor_target_host_set) && (
+                <DockerServiceManager />
               )}
             </div>
           )}

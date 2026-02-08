@@ -4,3 +4,4 @@ requests
 python-dotenv
 Flask-Cors
 jetson-stats
+docker
