@@ -1,14 +1,8 @@
+allowed_hosts: [ "192.168.1.11", "192.168.1.11:3000", "192.168.1.16", "192.168.1.16:3000", "localhost", "127.0.0.1" ]
+
 title: Home AI Dashboard
 background:
   image: https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=2070
-
-allowed_hosts:
-  - 192.168.1.11
-  - 192.168.1.11:3000
-  - 192.168.1.16
-  - 192.168.1.16:3000
-  - localhost
-  - 127.0.0.1
 
 layout:
   Core AI:
