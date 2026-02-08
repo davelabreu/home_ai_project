@@ -64,7 +64,7 @@ services:
       - apparmor:unconfined
     pid: host
     volumes:
-      - netdataconfig:/etc/netdata
+      - ./netdata/config:/etc/netdata # Local config for exporting
       - netdatalib:/var/lib/netdata
       - netdatacache:/var/cache/netdata
       - /etc/passwd:/host/etc/passwd:ro
@@ -73,6 +73,22 @@ services:
       - /sys:/host/sys:ro
       - /etc/os-release:/host/etc/os-release:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  influxdb:
+    image: influxdb:latest
+    container_name: influxdb
+    ports:
+      - "8086:8086"
+    restart: always
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=abrooski
+      - DOCKER_INFLUXDB_INIT_PASSWORD=home_ai_project_stats # You should change this later!
+      - DOCKER_INFLUXDB_INIT_ORG=home_ai
+      - DOCKER_INFLUXDB_INIT_BUCKET=jetson_metrics
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+      - influxdb_config:/etc/influxdb2
 
   data_analyzer:
     build:
@@ -101,6 +117,7 @@ services:
       - dashboard
 
 volumes:
-  netdataconfig:
   netdatalib:
   netdatacache:
+  influxdb_data:
+  influxdb_config:

@@ -13,6 +13,12 @@
         description: Home AI Companion Dashboard
         server: my-docker-host
         container: home_ai_dashboard
+    - InfluxDB:
+        icon: mdi-database
+        href: http://192.168.1.11:8086
+        description: Time-Series Saved Statistics
+        server: my-docker-host
+        container: influxdb
     - Data Analyzer:
         icon: mdi-chart-bell-curve-cumulative
         href: http://192.168.1.11:8051

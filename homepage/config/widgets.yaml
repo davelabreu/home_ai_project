@@ -22,4 +22,4 @@
       - system.cpu
       - mem.available
       - system.load
-      - system.io
+      - sensors.voltage_ina3221-i2c-1-40_in2_VDD_CPU_GPU_CV_input
