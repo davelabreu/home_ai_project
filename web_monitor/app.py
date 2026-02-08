@@ -231,65 +231,24 @@ def get_config():
 from flask import request # Import request for handling POST data
 
 @app.route('/api/command/reboot', methods=['POST'])
-
 def command_reboot():
-
-    """
-
-    Executes a system reboot command on the machine running this Flask app.
-
-    This endpoint requires POST requests.
-
-    Uses subprocess.Popen to initiate the reboot in the background,
-
-    allowing the Flask app to return a response immediately.
-
-
-
-    SECURITY NOTE: This is a highly sensitive endpoint. In a production environment,
-
-    it MUST be protected by robust authentication and authorization mechanisms
-
-    to prevent unauthorized system reboots.
-
-    """
-
     app.logger.info("Received request to reboot system.")
-
     try:
-
-        # Launch the shutdown command in a non-blocking way (Popen)
-
-        # stderr and stdout are redirected to /dev/null to prevent hanging
-
-        # and to keep the Flask app clean.
-
-                                                # Sends a signal to the host systemd via the mounted D-Bus
-
-                                                cmd = [
-
-                                                    "dbus-send", "--system", "--print-reply", 
-
-                                                    "--dest=org.freedesktop.login1", 
-
-                                                    "/org/freedesktop/login1", 
-
-                                                    "org.freedesktop.login1.Manager.Reboot", 
-
-                                                    "boolean:true"
-
-                                                ]
-
-                                                subprocess.Popen(cmd,
-
-                                                                 stdout=subprocess.DEVNULL,
-
-                                                                                                                  stderr=subprocess.DEVNULL)
-                                                                                                 
-                                                                         return jsonify({'status': 'success', 'message': 'System is rebooting.'}), 200 # <-- Re-inserting this line
-                                                                     except Exception as e:
+        # Sends a signal to the host systemd via the mounted D-Bus
+        cmd = [
+            "dbus-send", "--system", "--print-reply", 
+            "--dest=org.freedesktop.login1", 
+            "/org/freedesktop/login1", 
+            "org.freedesktop.login1.Manager.Reboot", 
+            "boolean:true"
+        ]
+        subprocess.Popen(cmd,
+                         stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL)
+        
+        return jsonify({'status': 'success', 'message': 'System is rebooting.'}), 200
+    except Exception as e:
         app.logger.error(f"An unexpected error occurred while initiating reboot: {e}")
-
         return jsonify({'status': 'error', 'message': f'An unexpected error occurred: {str(e)}'}), 500
 
 
