@@ -32,11 +32,16 @@ function App() {
       return;
     }
 
-    setRebootMessage(`Attempting to hard reboot remote host (${monitorTargetHost}:${monitorTargetPort})...`);
-    try {
-      const response = await fetch(`http://${monitorTargetHost}:${monitorTargetPort}/api/command/host_hard_reboot`, { method: 'POST' });
-      const data = await response.json();
-
+          setRebootMessage(`Attempting to hard reboot remote host (${monitorTargetHost}:${monitorTargetPort})...`);
+        try {
+          const response = await fetch(`http://${monitorTargetHost}:${monitorTargetPort}/api/command/reboot`, { 
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ type: 'hard' }),
+          });
+          const data = await response.json();
       if (response.ok) {
         setRebootMessage(`Hard reboot initiated: ${data.message}`);
       } else {
@@ -59,7 +64,13 @@ function App() {
 
     setSoftRebootMessage(`Attempting to soft reboot remote host (${monitorTargetHost}:${monitorTargetPort})...`);
     try {
-      const response = await fetch(`http://${monitorTargetHost}:${monitorTargetPort}/api/command/host_soft_reboot`, { method: 'POST' });
+      const response = await fetch(`http://${monitorTargetHost}:${monitorTargetPort}/api/command/reboot`, { 
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ type: 'soft' }),
+      });
       const data = await response.json();
 
       if (response.ok) {
