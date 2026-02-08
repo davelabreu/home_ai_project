@@ -22,9 +22,15 @@
     - Data Analyzer:
         icon: mdi-chart-bell-curve-cumulative
         href: http://192.168.1.11:8051
-        description: CSV Analytics & Visualization
+        description: CSV Analytics (Legacy/Stable)
         server: my-docker-host
         container: data_analyzer
+    - Data Gobbler v2:
+        icon: mdi-robot-industrial
+        href: http://192.168.1.11:8052
+        description: Modular Pro Workbench
+        server: my-docker-host
+        container: data_gobbler
     - Netdata:
         icon: mdi-chart-line
         href: http://192.168.1.11:19999

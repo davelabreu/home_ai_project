@@ -102,6 +102,17 @@ services:
     volumes:
       - ./data_analyzer/projects:/app/projects
 
+  data_gobbler:
+    build:
+      context: .
+      dockerfile: ./data_gobbler/Dockerfile
+    container_name: data_gobbler
+    restart: always
+    ports:
+      - "8052:8050" # Map 8052 to internal 8050
+    volumes:
+      - ./data_gobbler/projects:/app/projects
+
   homepage:
     image: ghcr.io/gethomepage/homepage:latest
     container_name: homepage
