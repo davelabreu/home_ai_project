@@ -264,11 +264,27 @@ def command_reboot():
 
         # and to keep the Flask app clean.
 
-        subprocess.Popen(['sudo', 'shutdown', '-r', 'now'],
+                # Sends a signal to the host systemd via the mounted D-Bus
 
-                         stdout=subprocess.DEVNULL,
+                cmd = [
 
-                         stderr=subprocess.DEVNULL)
+                    "dbus-send", "--system", "--print-reply", 
+
+                    "--dest=org.freedesktop.login1", 
+
+                    "/org/freedesktop/login1", 
+
+                    "org.freedesktop.login1.Manager.Reboot", 
+
+                    "boolean:true"
+
+                ]
+
+                subprocess.Popen(cmd,
+
+                                 stdout=subprocess.DEVNULL,
+
+                                 stderr=subprocess.DEVNULL)
 
         
 
