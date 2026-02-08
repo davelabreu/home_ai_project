@@ -80,12 +80,6 @@ services:
     ports:
       - "8086:8086"
     restart: always
-    environment:
-      - DOCKER_INFLUXDB_INIT_MODE=setup
-      - DOCKER_INFLUXDB_INIT_USERNAME=abrooski
-      - DOCKER_INFLUXDB_INIT_PASSWORD=home_ai_project_stats # You should change this later!
-      - DOCKER_INFLUXDB_INIT_ORG=home_ai
-      - DOCKER_INFLUXDB_INIT_BUCKET=jetson_metrics
     volumes:
       - influxdb_data:/var/lib/influxdb2
       - influxdb_config:/etc/influxdb2
