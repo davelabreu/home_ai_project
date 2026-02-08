@@ -94,32 +94,43 @@ def fetch_netdata_stats(n_clicks):
         return ""
     
     try:
-        # Netdata API: Get last 1 hour of data for specific charts
-        # Using the internal Docker network name 'netdata'
-        charts = ['system.cpu', 'mem.available', 'system.load']
-        all_data = []
+        # High-value Jetson Metrics
+        # Mapping Netdata chart names to friendly labels
+        chart_map = {
+            'system.cpu': 'CPU %',
+            'mem.available': 'Available RAM',
+            'system.load': 'Sys Load',
+            'system.uptime': 'Uptime',
+            'cpu.cpufreq': 'CPU Freq (MHz)',
+            'sensors.voltage_ina3221-i2c-1-40_in2_VDD_CPU_GPU_CV_input': 'CPU/GPU Power (mW)'
+        }
         
-        for chart in charts:
-            url = f"http://netdata:19999/api/v1/data?chart={chart}&after=-3600&format=json"
-            response = requests.get(url, timeout=5)
-            response.raise_for_status()
-            res_json = response.json()
-            
-            # Convert Netdata JSON to a temporary DataFrame for merging
-            cols = ['time'] + res_json['labels'][1:]
-            chart_df = pd.DataFrame(res_json['data'], columns=cols)
-            chart_df['time'] = pd.to_datetime(chart_df['time'], unit='s')
-            all_data.append(chart_df.set_index('time'))
+        all_data = []
+        for chart_id, label in chart_map.items():
+            try:
+                url = f"http://netdata:19999/api/v1/data?chart={chart_id}&after=-3600&format=json"
+                response = requests.get(url, timeout=3)
+                if response.status_code == 200:
+                    res_json = response.json()
+                    cols = ['time'] + [f"{label} ({l})" for l in res_json['labels'][1:]]
+                    chart_df = pd.DataFrame(res_json['data'], columns=cols)
+                    chart_df['time'] = pd.to_datetime(chart_df['time'], unit='s')
+                    all_data.append(chart_df.set_index('time'))
+            except:
+                continue # Skip if a specific sensor is missing
+
+        if not all_data:
+            return html.Div("Could not fetch any data from Netdata. Are the sensors active?", style={'color': 'orange'})
 
         # Merge all charts into one master DataFrame
-        df = pd.concat(all_data, axis=1).reset_index()
+        df = pd.concat(all_data, axis=1).sort_index().reset_index()
         
         # Persist to disk
         project_dir = ensure_project_dir('home_jetson')
-        save_path = os.path.join(project_dir, f"netdata_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
+        save_path = os.path.join(project_dir, f"jetson_stats_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
         df.to_csv(save_path, index=False)
         
-        return render_data_summary(df, f"Successfully fetched {len(df)} records from Netdata")
+        return render_data_summary(df, f"Fetched {len(df)} records (Uptime, Power, CPU, RAM)")
     except Exception as e:
         return html.Div(f"Error fetching from Netdata: {str(e)}", style={'color': 'red'})
 
