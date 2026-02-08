@@ -49,3 +49,45 @@ services:
               - driver: nvidia
                 count: all
                 capabilities: [gpu]
+
+  netdata:
+    image: netdata/netdata:latest
+    container_name: netdata
+    hostname: jetson-monitor
+    ports:
+      - "19999:19999"
+    restart: always
+    cap_add:
+      - SYS_PTRACE
+      - SYS_ADMIN
+    security_opt:
+      - apparmor:unconfined
+    pid: host
+    volumes:
+      - netdataconfig:/etc/netdata
+      - netdatalib:/var/lib/netdata
+      - netdatacache:/var/cache/netdata
+      - /etc/passwd:/host/etc/passwd:ro
+      - /etc/group:/host/etc/group:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /etc/os-release:/host/etc/os-release:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    ports:
+      - "3000:3000"
+    restart: always
+    volumes:
+      - ./homepage/config:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - netdata
+      - dashboard
+
+volumes:
+  netdataconfig:
+  netdatalib:
+  netdatacache:
