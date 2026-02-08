@@ -27,21 +27,17 @@ prime_model() {
 # --- Sub-Menu: Individual Containers ---
 reboot_container_menu() {
     local PS3='Select a container to restart (or Back): '
-    # Auto-discover running containers from your project
     local containers=($(docker compose ps --services))
     containers+=("Back")
 
     select container in "${containers[@]}"
     do
         case $container in
-            "Back")
-                return # Go back to main menu
-                ;;
+            "Back") return ;;
             *)
                 if [[ -n "$container" ]]; then
                     echo "--- 🔄 Restarting $container ---"
                     docker compose restart "$container"
-                    # Prime specifically if it's the ollama service
                     [[ "$container" == *"ollama"* ]] && prime_model
                     return
                 else
@@ -52,9 +48,30 @@ reboot_container_menu() {
     done
 }
 
+# --- New Logic: Restart Everything EXCEPT Ollama ---
+restart_non_ai_services() {
+    echo "--- 🧨 Rebooting all services EXCEPT Ollama ---"
+    # Get all services, filter out any with 'ollama' in the name
+    local services_to_restart=$(docker compose ps --services | grep -v "ollama")
+    
+    if [ -n "$services_to_restart" ]; then
+        docker compose restart $services_to_restart
+        echo "--- ✅ Services restarted: $services_to_restart ---"
+    else
+        echo "--- ⚠️ No other services found to restart. ---"
+    fi
+}
+
 # --- Main Menu Logic ---
 PS3='Choose a deployment action: '
-options=("Full System Reset (The Works)" "Update Dashboard Only" "Restart Individual Container" "Restart/Prime Ollama Only" "Quit")
+options=(
+    "Full System Reset (The Works)" 
+    "Restart All EXCEPT Ollama"
+    "Update Dashboard Only" 
+    "Restart Individual Container" 
+    "Restart/Prime Ollama Only" 
+    "Quit"
+)
 
 select opt in "${options[@]}"
 do
@@ -67,6 +84,10 @@ do
             prime_model
             break
             ;;
+        "Restart All EXCEPT Ollama")
+            restart_non_ai_services
+            break
+            ;;
         "Update Dashboard Only")
             git pull origin master
             docker compose up -d --build dashboard
@@ -74,7 +95,7 @@ do
             break
             ;;
         "Restart Individual Container")
-            reboot_container_menu # Call the sub-menu function
+            reboot_container_menu
             break
             ;;
         "Restart/Prime Ollama Only")
@@ -83,9 +104,7 @@ do
             prime_model
             break
             ;;
-        "Quit")
-            exit
-            ;;
+        "Quit") exit ;;
         *) echo "invalid option $REPLY";;
     esac
 done
