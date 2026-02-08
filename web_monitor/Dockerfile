@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -y \
     net-tools \
     procps \
     sudo \
+    dbus-utils \
     --no-install-recommends && rm -rf /var/lib/apt/lists/*
 
 # Copy built frontend from frontend-builder stage
