@@ -73,7 +73,6 @@ PS3='Choose a deployment action: '
 options=(
     "Full System Reset (The Works)" 
     "Restart All EXCEPT Ollama"
-    "Update Dashboard Only" 
     "Restart Individual Container" 
     "Restart/Prime Ollama Only" 
     "Quit"
@@ -92,12 +91,6 @@ do
             ;;
         "Restart All EXCEPT Ollama")
             rebuild_non_ai_services
-            break
-            ;;
-        "Update Dashboard Only")
-            git pull origin master
-            docker compose up -d --build dashboard
-            echo "--- ✅ Dashboard Updated ---"
             break
             ;;
         "Restart Individual Container")
