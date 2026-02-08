@@ -14,6 +14,9 @@ services:
       - /var/run/dbus:/var/run/dbus  # Connects container to host system bus
       - /var/run/docker.sock:/var/run/docker.sock # Allows container to interact with host Docker daemon
       - /home/abrooski/.ssh/abrooski_jetson:/root/.ssh/abrooski_jetson:ro # Mount SSH private key
+      - /usr/bin/tegrastats:/usr/bin/tegrastats # Adding tegrastats access
+      - /sys:/sys
+      - /dev:/dev
     environment: # New section for environment variables
       - SSH_USERNAME=abrooski
       - SSH_PRIVATE_KEY_PATH=/root/.ssh/abrooski_jetson

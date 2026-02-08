@@ -210,8 +210,8 @@ def get_jetson_gpu_info():
     # Only execute tegrastats on Linux (Jetson)
     try:
         # Run tegrastats for a short duration to get a single snapshot
-        # --nosync avoids waiting for sync, --interval 100 gets 1 sample quickly
-        result = subprocess.run(['tegrastats', '--interval', '100', '--logfile', '/dev/stdout', '--nosync'], 
+        # --interval 100 gets 1 sample quickly. Removed --nosync as it's not supported.
+        result = subprocess.run(['tegrastats', '--interval', '100', '--logfile', '/dev/stdout'], 
                                 capture_output=True, text=True, check=True, timeout=2)
         output_lines = result.stdout.strip().split('\n')
         
@@ -227,31 +227,27 @@ def get_jetson_gpu_info():
             'ram_total_mb': None,
         }
 
-        # Regex patterns to extract information
-        # Example line: RAM 1148/7862MB (lfb 271x4MB) SWAP 0/3931MB (cached 0MB) CPU [0%@1224,0%@1224,0%@1224,0%@1224,0%@1224,0%@1224] EMC 0%@204 APE 150 BCPU@1200 GR3D@1224 NVJPG@100 NVDEC@100 NVENC@100 VIC@100 PVA@1150 DLA@100(active) POWER 1089mW (SID 0mW/538mW) VDD_GPU 100/100 VDD_CPU 100/100 VDD_SOC 100/100 VDD_DDR 100/100
-        
-        # GPU Usage (GR3D clock frequency - a proxy for usage, actual usage % is harder to get directly)
-        gr3d_match = re.search(r'GR3D@(\d+)', last_line)
-        if gr3d_match:
-            gpu_info['gpu_percent'] = int(gr3d_match.group(1)) # This is clock speed, not %
+        # Regex patterns to extract information based on provided output:
+        # Example line: 02-07-2026 22:52:40 RAM 4229/7620MB (...) GR3D_FREQ 0% (...) gpu@53.406C (...) VDD_IN 6488mW/6488mW
 
-        # EMC Usage (Memory Controller)
+        # GPU Usage (GR3D_FREQ percentage)
+        gr3d_percent_match = re.search(r'GR3D_FREQ (\d+)%', last_line)
+        if gr3d_percent_match:
+            gpu_info['gpu_percent'] = int(gr3d_percent_match.group(1))
+
+        # EMC Usage (Memory Controller) - Not present in provided tegrastats output, so this will likely be None
         emc_match = re.search(r'EMC (\d+)%', last_line)
         if emc_match:
             gpu_info['emc_percent'] = int(emc_match.group(1))
 
-        # GPU Temperature (often in the form 'GPU@XX.XC' or 'TMON @XX.XC')
-        temp_match = re.search(r'GPU@(\d+\.?\d*)C', last_line)
+        # GPU Temperature (e.g., gpu@53.406C)
+        temp_match = re.search(r'gpu@(\d+\.?\d*)C', last_line)
         if temp_match:
             gpu_info['gpu_temp_c'] = float(temp_match.group(1))
-        else: # Try general thermal monitor if GPU specific isn't found
-            temp_match_general = re.search(r'TMON @(\d+\.?\d*)C', last_line)
-            if temp_match_general:
-                gpu_info['gpu_temp_c'] = float(temp_match_general.group(1))
+        # Note: 'TMON @' or 'GPU@' might also be present for temperature
 
-
-        # Power (POWER xxxmW)
-        power_match = re.search(r'POWER (\d+)mW', last_line)
+        # Power (VDD_IN xxxmW/yyymW) - taking the first value
+        power_match = re.search(r'VDD_IN (\d+)mW', last_line)
         if power_match:
             gpu_info['power_mw'] = int(power_match.group(1))
         
