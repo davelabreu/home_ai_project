@@ -8,6 +8,7 @@ import os
 sys.path.append(os.path.dirname(__file__))
 
 from components.ingest_wizard import render_ingest_wizard
+from components.inspector_panel import render_inspector_panel
 
 app = dash.Dash(
     __name__,
@@ -24,7 +25,7 @@ SIDEBAR_STYLE = {
     "bottom": 0,
     "width": "16rem",
     "padding": "2rem 1rem",
-    "background-color": "#111", # Slightly darker than Darkly surface
+    "background-color": "#111", 
     "border-right": "1px solid #333",
     "z-index": 1000
 }
@@ -59,10 +60,9 @@ sidebar = html.Div(
             className="w-100 py-2",
             style={"border-radius": "10px"}
         ),
-        # Footer branding
         html.Div([
-            html.P("v0.3.2", className="text-muted mb-0", style={"font-size": "10px"}),
-            html.P("AI Workbench Core", className="text-muted", style={"font-size": "10px"}),
+            html.P("v0.4.0", className="text-muted mb-0", style={"font-size": "10px"}),
+            html.P("Split-Pane Engine", className="text-muted", style={"font-size": "10px"}),
         ], style={"position": "absolute", "bottom": "1rem", "left": "1rem"})
     ],
     style=SIDEBAR_STYLE,
@@ -70,10 +70,11 @@ sidebar = html.Div(
 
 app.layout = html.Div([
     dcc.Location(id='url', refresh=True),
-    dcc.Store(id='wizard-trigger-store', data=0), # Centralized trigger signal
+    dcc.Store(id='wizard-trigger-store', data=0), 
     sidebar,
     html.Div(dash.page_container, style=CONTENT_STYLE),
-    render_ingest_wizard()
+    render_ingest_wizard(),
+    render_inspector_panel() # Contextual settings sidebar
 ])
 
 # Global callback to relay sidebar button to store

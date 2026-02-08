@@ -1,62 +1,74 @@
 import dash
-from dash import html, dcc, Input, Output, callback, State
+from dash import html, dcc, Input, Output, callback, State, ALL, MATCH
 import dash_bootstrap_components as dbc
 from utils.data_manager import DataManager
 from utils.plotting import PlotTemplates
+from components.plot_card import render_plot_card
 import pandas as pd
+import json
 
 dash.register_page(__name__, path='/work-logs')
 
 def layout():
-    # Load all log projects
     projects = DataManager.get_projects()
     log_projects = {pid: info for pid, info in projects.items() if info['type'] in ['logs', 'encoder_analysis']}
     
     return dbc.Container([
+        # 1. TOP BAR (Global Controls)
         dbc.Row([
-            # Left Column: Project & File Selection
             dbc.Col([
                 dbc.Card([
-                    dbc.CardHeader("Project Navigator"),
                     dbc.CardBody([
-                        html.Label("Select Project:"),
-                        dcc.Dropdown(
-                            id='log-project-selector',
-                            options=[{'label': p['name'], 'value': pid} for pid, p in log_projects.items()],
-                            value=list(log_projects.keys())[0] if log_projects else None,
-                            clearable=False,
-                            className="mb-3",
-                            style={'color': 'black'}
-                        ),
-                        html.Label("Select File:"),
-                        dcc.Dropdown(
-                            id='log-file-selector', 
-                            placeholder="Select a file...",
-                            style={'color': 'black'}
-                        ),
+                        dbc.Row([
+                            dbc.Col([
+                                html.Label("Active Project", className="small fw-bold mb-1"),
+                                dcc.Dropdown(
+                                    id='log-project-selector',
+                                    options=[{'label': p['name'], 'value': pid} for pid, p in log_projects.items()],
+                                    value=list(log_projects.keys())[0] if log_projects else None,
+                                    clearable=False,
+                                    style={'color': 'black'}
+                                ),
+                            ], width=4),
+                            dbc.Col([
+                                html.Label("Data File", className="small fw-bold mb-1"),
+                                dcc.Dropdown(
+                                    id='log-file-selector', 
+                                    placeholder="Select a file...",
+                                    style={'color': 'black'}
+                                ),
+                            ], width=4),
+                            dbc.Col([
+                                html.Div(id="log-file-metadata", className="mt-4 small text-muted text-end")
+                            ], width=4)
+                        ])
                     ])
-                ], className="mb-4 shadow-sm"),
-                
-                dbc.Card([
-                    dbc.CardHeader("Quick Info"),
-                    dbc.CardBody(id="log-file-metadata", className="small text-muted")
-                ], className="shadow-sm")
-            ], width=3),
+                ], className="mb-4 shadow-sm border-0", style={"background-color": "#1e1e1e"})
+            ], width=12)
+        ]),
 
-            # Right Column: Main Visualization Area
+        # 2. CENTRAL CANVAS (The Grid of Plot Cards)
+        dbc.Row([
             dbc.Col([
-                dbc.Card([
-                    dbc.CardBody([
-                        dcc.Loading(
-                            id="loading-main-plot",
-                            type="default",
-                            children=dcc.Graph(id="log-main-plot", style={'height': '80vh'})
-                        )
-                    ])
-                ], className="shadow-lg")
-            ], width=9)
-        ])
-    ], fluid=True, className="mt-2")
+                html.Div(id="plot-canvas", children=[
+                    # We'll start with one default plot card
+                    render_plot_card("main-plot", title="Initial Analysis View")
+                ])
+            ], width=12)
+        ]),
+
+        # 3. ADD PLOT BUTTON (FAB)
+        html.Div([
+            dbc.Button(
+                html.I(className="bi bi-plus-lg"),
+                id="add-plot-btn",
+                color="success",
+                className="rounded-circle shadow-lg",
+                style={"width": "60px", "height": "60px", "font-size": "24px"}
+            )
+        ], style={"position": "fixed", "bottom": "2rem", "right": "2rem", "z-index": "100"})
+
+    ], fluid=True)
 
 # --- Callbacks ---
 
@@ -71,35 +83,26 @@ def update_file_dropdown(project_id):
     return [{'label': f, 'value': f} for f in files]
 
 @callback(
-    [Output('log-main-plot', 'figure'),
+    [Output({'type': 'plot-graph', 'index': MATCH}, 'figure'),
      Output('log-file-metadata', 'children')],
     [Input('log-file-selector', 'value')],
-    [State('log-project-selector', 'value')]
+    [State('log-project-selector', 'value'),
+     State({'type': 'plot-graph', 'index': MATCH}, 'id')]
 )
-def update_main_viz(filename, project_id):
+def update_plots(filename, project_id, plot_id_obj):
     if not filename or not project_id:
-        return {}, "Select a file to view stats."
+        return dash.no_update, "No file selected."
     
-    # 1. Load Data
     df = DataManager.load_dataframe(project_id, filename)
-    
-    # 2. Identify Project Type & Template
     projects = DataManager.get_projects()
     template = projects[project_id].get('template')
     
-    # 3. Generate Figure
+    # Logic for individual cards
     if template == 'encoder_quadrature':
-        fig = PlotTemplates.encoder_analysis_v6(df, title=f"Encoder Analysis: {filename}")
+        fig = PlotTemplates.encoder_analysis_v6(df, title=f"Encoder Analysis")
     else:
-        # Default fallback plot
         import plotly.express as px
-        fig = px.line(df, x=df.columns[0], y=df.columns[1:], title=f"Generic Log: {filename}", template="plotly")
+        fig = px.line(df, x=df.columns[0], y=df.columns[1:], title="Generic Line Plot")
     
-    # 4. Generate Metadata
-    metadata = [
-        html.P(f"Filename: {filename}"),
-        html.P(f"Rows: {len(df)}"),
-        html.P(f"Columns: {len(df.columns)}")
-    ]
-    
+    metadata = f"Records: {len(df)} | Cols: {len(df.columns)}"
     return fig, metadata

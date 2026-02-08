@@ -16,10 +16,11 @@ A professional-grade, sexy Dash/Plotly application for multi-project data ingest
 - **Rules**: Governed by `CODE_RULES.md`.
 - **Navigation**: Persistent Navbar with global Ingestion Wizard and project-based routing.
 
-## Current Roadmap
+## Current Roadmap (v0.4.0: The Canvas & Inspector Phase)
 - [x] **Scaffold Architecture**: Modular Pages structure and requirements.
 - [x] **Data Manager Engine**: Robust CSV handling and project siloing logic.
 - [x] **Ingestion Wizard**: Multi-step modal for file routing and pre-processing.
-- [ ] **Data Selection**: Interactive sidebar in Work Logs for historical file reload.
-- [ ] **Plot Customization**: UI controls for trace colors, thickness, and types.
+- [ ] **Split-Pane Layout**: Implement Top Bar (Global Controls) and Right Sidebar (Contextual Inspector).
+- [ ] **Plot Card Component**: Reusable card with settings trigger for independent plotting.
+- [ ] **No-Code Customization**: Header renaming and trace toggling via Inspector UI.
 - [ ] **Template Engine**: Saveable plotting configurations (JSON).
