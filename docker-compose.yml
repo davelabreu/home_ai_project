@@ -7,7 +7,6 @@ services:
     container_name: home_ai_dashboard
     depends_on:
       - ollama
-    privileged: true # Added for testing host reboot capability
     restart: always
     ports:
       - "8050:5000" # Maps Jetson 8050 -> Container 5000
