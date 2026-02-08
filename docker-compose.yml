@@ -83,7 +83,7 @@ services:
     environment:
       - DOCKER_INFLUXDB_INIT_MODE=setup
       - DOCKER_INFLUXDB_INIT_USERNAME=admin
-      - DOCKER_INFLUXDB_INIT_PASSWORD=password1234
+      - DOCKER_INFLUXDB_INIT_PASSWORD=admin
       - DOCKER_INFLUXDB_INIT_ORG=home_ai
       - DOCKER_INFLUXDB_INIT_BUCKET=jetson_metrics
       - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=home-ai-super-secret-token
