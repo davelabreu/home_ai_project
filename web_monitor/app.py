@@ -257,32 +257,27 @@ def command_hard_reboot():
 
 
 @app.route('/api/command/soft_reboot', methods=['POST'])
-
 def command_soft_reboot():
-
     app.logger.info("Received request to soft reboot (container restart).")
-
     try:
-
         # Construct the path to deploy.sh relative to the current script
-
         deploy_script_path = os.path.join(basedir, '..', '..', 'deploy.sh')
-
         
+        # Execute the deploy.sh script in a detached process, capturing stdout/stderr
+        # We use setsid to run the script in a new session, completely detaching it.
+        # This prevents the Flask app from waiting for the script to finish or hanging.
+        process = subprocess.Popen(['setsid', 'bash', deploy_script_path],
+                                   cwd=os.path.join(basedir, '..', '..'),
+                                   stdout=subprocess.PIPE, # Capture stdout
+                                   stderr=subprocess.PIPE, # Capture stderr
+                                   text=True) # Decode output as text
 
-        # Execute the deploy.sh script in a non-blocking way
-
-        subprocess.Popen(['bash', deploy_script_path],
-
-                            stdout=subprocess.DEVNULL,
-
-                            stderr=subprocess.DEVNULL,
-
-                            cwd=os.path.join(basedir, '..', '..')) # Set CWD to the project root
-
+        # Log that the process has been launched. We won't wait for its completion here.
+        app.logger.info(f"Soft reboot script '{deploy_script_path}' launched as detached process PID: {process.pid}")
         
-
-        return jsonify({'status': 'success', 'message': 'Container soft reboot initiated.'}), 200
+        # We can't immediately return stdout/stderr as the script runs in background.
+        # For now, just confirm launch.
+        return jsonify({'status': 'success', 'message': 'Container soft reboot initiated. Check server logs for script output.'}), 200
 
     except Exception as e:
 
