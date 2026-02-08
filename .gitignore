@@ -6,6 +6,7 @@ instance/
 
 # external_templates
 external_templates/
+data_gobbler/examples_for_inspiration
 
 # Frontend
 web_monitor/frontend/node_modules/

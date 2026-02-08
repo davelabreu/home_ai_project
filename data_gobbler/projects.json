@@ -1,0 +1,18 @@
+{
+    "home_jetson": {
+        "name": "🏠 Home Jetson Stats",
+        "description": "Historical hardware telemetry from the local Jetson Nano.",
+        "template": "hardware_telemetry"
+    },
+    "work_logs": {
+        "name": "💼 Work Log Analysis",
+        "description": "Professional engineering log ingestion and plotting.",
+        "template": "log_generic"
+    },
+    "encoder_analysis": {
+        "name": "⚙️ Encoder Phase Analysis",
+        "description": "Decoding quadrature A/B signals into position, velocity, and slip detection.",
+        "type": "encoder_analysis",
+        "template": "encoder_quadrature"
+    }
+}
