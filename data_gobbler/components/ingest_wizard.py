@@ -61,8 +61,7 @@ def render_ingest_wizard():
      Output("wizard-file-info", "children"),
      Output("url", "pathname"),
      Output("wizard-project-info", "children")],
-    [Input("open-wizard-btn", "n_clicks"),
-     Input("home-ingest-btn", "n_clicks"),
+    [Input("wizard-trigger-store", "data"),
      Input("wizard-cancel", "n_clicks"),
      Input("wizard-submit", "n_clicks"),
      Input("wizard-upload", "contents"),
@@ -71,7 +70,7 @@ def render_ingest_wizard():
      State("wizard-upload", "filename")],
     prevent_initial_call=True
 )
-def handle_wizard_logic(n_open_nav, n_open_home, n_cancel, n_submit, contents, project_id, is_open, filename):
+def handle_wizard_logic(trigger_signal, n_cancel, n_submit, contents, project_id, is_open, filename):
     ctx = dash.callback_context
     if not ctx.triggered:
         return is_open, dash.no_update, True, "", dash.no_update, ""
@@ -86,7 +85,7 @@ def handle_wizard_logic(n_open_nav, n_open_home, n_cancel, n_submit, contents, p
         project_info = dbc.Badge(f"Selected: {p.get('name')}", color="info", className="p-2")
 
     # 1. Open/Close Logic
-    if ("open-wizard-btn" in trigger or "home-ingest-btn" in trigger) and (n_open_nav or n_open_home):
+    if "wizard-trigger-store" in trigger and trigger_signal:
         return True, "", True, "", dash.no_update, ""
 
     if "wizard-cancel" in trigger:

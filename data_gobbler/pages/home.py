@@ -26,3 +26,13 @@ layout = dbc.Container([
         ], width=12)
     ], className="mt-5")
 ], fluid=True)
+
+# Callback to relay home button to global store
+@dash.callback(
+    dash.Output('wizard-trigger-store', 'data', allow_duplicate=True),
+    dash.Input('home-ingest-btn', 'n_clicks'),
+    dash.State('wizard-trigger-store', 'data'),
+    prevent_initial_call=True
+)
+def relay_home_trigger(n, current):
+    return (current or 0) + 1

@@ -70,10 +70,21 @@ sidebar = html.Div(
 
 app.layout = html.Div([
     dcc.Location(id='url', refresh=True),
+    dcc.Store(id='wizard-trigger-store', data=0), # Centralized trigger signal
     sidebar,
     html.Div(dash.page_container, style=CONTENT_STYLE),
     render_ingest_wizard()
 ])
+
+# Global callback to relay sidebar button to store
+@app.callback(
+    dash.Output('wizard-trigger-store', 'data'),
+    dash.Input('open-wizard-btn', 'n_clicks'),
+    dash.State('wizard-trigger-store', 'data'),
+    prevent_initial_call=True
+)
+def relay_sidebar_trigger(n, current):
+    return (current or 0) + 1
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8050, debug=True)
