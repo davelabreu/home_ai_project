@@ -230,9 +230,9 @@ def get_config():
 
 from flask import request # Import request for handling POST data
 
-@app.route('/api/command/reboot', methods=['POST'])
-def command_reboot():
-    app.logger.info("Received request to reboot system.")
+@app.route('/api/command/hard_reboot', methods=['POST'])
+def command_hard_reboot():
+    app.logger.info("Received request to hard reboot system.")
     try:
         # Sends a signal to the host systemd via the mounted D-Bus
         cmd = [
@@ -247,9 +247,50 @@ def command_reboot():
                          stderr=subprocess.DEVNULL)
         
         return jsonify({'status': 'success', 'message': 'System is rebooting.'}), 200
+        
     except Exception as e:
+        
         app.logger.error(f"An unexpected error occurred while initiating reboot: {e}")
+
         return jsonify({'status': 'error', 'message': f'An unexpected error occurred: {str(e)}'}), 500
+
+
+
+@app.route('/api/command/soft_reboot', methods=['POST'])
+
+def command_soft_reboot():
+
+    app.logger.info("Received request to soft reboot (container restart).")
+
+    try:
+
+        # Construct the path to deploy.sh relative to the current script
+
+        deploy_script_path = os.path.join(basedir, '..', '..', 'deploy.sh')
+
+        
+
+        # Execute the deploy.sh script in a non-blocking way
+
+        subprocess.Popen(['bash', deploy_script_path],
+
+                            stdout=subprocess.DEVNULL,
+
+                            stderr=subprocess.DEVNULL,
+
+                            cwd=os.path.join(basedir, '..', '..')) # Set CWD to the project root
+
+        
+
+        return jsonify({'status': 'success', 'message': 'Container soft reboot initiated.'}), 200
+
+    except Exception as e:
+
+        app.logger.error(f"An unexpected error occurred while initiating soft reboot: {e}")
+
+        return jsonify({'status': 'error', 'message': f'An unexpected error occurred: {str(e)}'}), 500
+
+
 
 
 

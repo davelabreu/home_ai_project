@@ -18,31 +18,57 @@ function App() {
   const { local: localNetwork, remote: remoteNetwork } = useNetworkStatus();
   const { monitor_target_host_set, monitorTargetHost, monitorTargetPort, loading: configLoading, error: configError } = useConfig();
   const [rebootMessage, setRebootMessage] = useState<string | null>(null);
+  const [softRebootMessage, setSoftRebootMessage] = useState<string | null>(null); // New state for soft reboot message
 
   const isJetsonApp = !monitor_target_host_set;
 
-  const handleReboot = async () => {
-    if (!window.confirm("Are you sure you want to reboot the remote host? This action cannot be undone.")) {
+  const handleHardReboot = async () => {
+    if (!window.confirm("Are you sure you want to perform a hard reboot on the remote host? This action will immediately power cycle the system.")) {
       return;
     }
 
-    if (!monitorTargetHost || !monitorTargetPort) { // Check for monitorTargetPort as well
-      setRebootMessage("Reboot failed: Remote host IP or port is not configured.");
+    if (!monitorTargetHost || !monitorTargetPort) {
+      setRebootMessage("Hard reboot failed: Remote host IP or port is not configured.");
       return;
     }
 
-    setRebootMessage(`Attempting to reboot remote host (${monitorTargetHost}:${monitorTargetPort})...`);
+    setRebootMessage(`Attempting to hard reboot remote host (${monitorTargetHost}:${monitorTargetPort})...`);
     try {
-      const response = await fetch(`http://${monitorTargetHost}:${monitorTargetPort}/api/command/reboot`, { method: 'POST' });
+      const response = await fetch(`http://${monitorTargetHost}:${monitorTargetPort}/api/command/hard_reboot`, { method: 'POST' });
       const data = await response.json();
 
       if (response.ok) {
-        setRebootMessage(`Reboot initiated: ${data.message}`);
+        setRebootMessage(`Hard reboot initiated: ${data.message}`);
       } else {
-        setRebootMessage(`Reboot failed: ${data.message || response.statusText}`);
+        setRebootMessage(`Hard reboot failed: ${data.message || response.statusText}`);
       }
     } catch (error: any) {
-      setRebootMessage(`Reboot request failed: ${error.message}`);
+      setRebootMessage(`Hard reboot request failed: ${error.message}`);
+    }
+  };
+
+  const handleSoftReboot = async () => {
+    if (!window.confirm("Are you sure you want to perform a soft reboot (container restart) on the remote host? This will restart the Docker containers but not power cycle the system.")) {
+      return;
+    }
+
+    if (!monitorTargetHost || !monitorTargetPort) {
+      setSoftRebootMessage("Soft reboot failed: Remote host IP or port is not configured.");
+      return;
+    }
+
+    setSoftRebootMessage(`Attempting to soft reboot remote host (${monitorTargetHost}:${monitorTargetPort})...`);
+    try {
+      const response = await fetch(`http://${monitorTargetHost}:${monitorTargetPort}/api/command/soft_reboot`, { method: 'POST' });
+      const data = await response.json();
+
+      if (response.ok) {
+        setSoftRebootMessage(`Soft reboot initiated: ${data.message}`);
+      } else {
+        setSoftRebootMessage(`Soft reboot failed: ${data.message || response.statusText}`);
+      }
+    } catch (error: any) {
+      setSoftRebootMessage(`Soft reboot request failed: ${error.message}`);
     }
   };
 
@@ -90,11 +116,17 @@ function App() {
                     systemInfo={remoteSystem.info} 
                     error={remoteSystem.error} 
                     loading={remoteSystem.loading} 
-                    onRebootClick={handleReboot}
+                    onHardRebootClick={handleHardReboot} // Pass the new hard reboot handler
+                    onSoftRebootClick={handleSoftReboot} // Pass the new soft reboot handler
                   />
                   {rebootMessage && (
                     <p className={`text-center text-sm ${rebootMessage.includes("failed") ? "text-destructive" : "text-primary"} mt-2`}>
                       {rebootMessage}
+                    </p>
+                  )}
+                  {softRebootMessage && ( // Display soft reboot message
+                    <p className={`text-center text-sm ${softRebootMessage.includes("failed") ? "text-destructive" : "text-primary"} mt-2`}>
+                      {softRebootMessage}
                     </p>
                   )}
                 </>

@@ -9,10 +9,11 @@ interface SystemInfoCardProps {
   systemInfo: SystemInfo | null;
   error: string | null;
   loading: boolean;
-  onRebootClick?: () => void; // Optional reboot action prop
+  onHardRebootClick?: () => void; // Optional hard reboot action prop
+  onSoftRebootClick?: () => void; // Optional soft reboot action prop
 }
 
-const SystemInfoCard: React.FC<SystemInfoCardProps> = ({ title, systemInfo, error, loading, onRebootClick }) => {
+const SystemInfoCard: React.FC<SystemInfoCardProps> = ({ title, systemInfo, error, loading, onHardRebootClick, onSoftRebootClick }) => {
   const getProgressColorClass = (value: number) => {
     if (value > 80) return 'bg-red-500';
     if (value > 50) return 'bg-yellow-500';
@@ -57,11 +58,18 @@ const SystemInfoCard: React.FC<SystemInfoCardProps> = ({ title, systemInfo, erro
               <span>Uptime:</span>
               <span className="font-medium">{systemInfo.uptime}</span>
             </div>
-            {onRebootClick && (
-              <div className="pt-4">
-                <Button onClick={onRebootClick} disabled={loading || error !== null} className="w-full">
-                  Reboot {title.includes("Remote Host") ? "Remote Host" : "System"}
-                </Button>
+            {(onHardRebootClick || onSoftRebootClick) && (
+              <div className="pt-4 flex space-x-2"> {/* Use flexbox to space buttons */}
+                {onHardRebootClick && (
+                  <Button onClick={onHardRebootClick} disabled={loading || error !== null} className="flex-1" variant="destructive"> {/* Added variant for distinction */}
+                    Hard Reboot
+                  </Button>
+                )}
+                {onSoftRebootClick && (
+                  <Button onClick={onSoftRebootClick} disabled={loading || error !== null} className="flex-1">
+                    Soft Reboot
+                  </Button>
+                )}
               </div>
             )}
           </>
