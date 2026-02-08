@@ -33,11 +33,15 @@ const ChatCard: React.FC = () => {
     setIsSending(true);
 
     try {
-      // Determine the API URL based on whether a remote host is configured
-      const targetHost = monitorTargetHost || 'localhost';
-      // If monitoring a remote host, use its configured port. Otherwise, assume local Flask app is on 5000.
-      const targetPort = monitor_target_host_set && monitorTargetPort ? monitorTargetPort : '5000';
-      const chatApiUrl = `http://${targetHost}:${targetPort}/api/chat`;
+      let chatApiUrl: string;
+      if (monitor_target_host_set && monitorTargetHost && monitorTargetPort) {
+        // When monitoring a remote host, use its configured host and port
+        chatApiUrl = `http://${monitorTargetHost}:${monitorTargetPort}/api/chat`;
+      } else {
+        // When running locally (Jetson's own dashboard), use a relative path
+        // The browser will resolve this relative to the current URL (e.g., http://192.168.1.11:8050)
+        chatApiUrl = '/api/chat';
+      }
 
       const response = await fetch(chatApiUrl, {
         method: 'POST',
