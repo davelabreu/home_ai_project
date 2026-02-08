@@ -1,21 +1,39 @@
 #!/bin/bash
-# Navigate to the project root
 cd ~/projects/dev/2.personal/home_ai_project
+
+echo "--- 🛡️  FORCE CLEARING Port 11434 ---"
+# This kills ANY process currently using the port, whether it's a service or a stray PID
+sudo fuser -k 11434/tcp > /dev/null 2>&1
+
+echo "--- 🧹 Clearing System Caches & Defragmenting Memory ---"
+# This tells the kernel to release as much buff/cache as possible
+sudo sync && echo 3 | sudo tee /proc/sys/vm/drop_caches > /dev/null
+
+echo "--- 🔄 Restarting Docker Daemon (to reset CUDA hooks) ---"
+sudo systemctl restart docker
 
 echo "--- 🚀 Pulling latest code from GitHub ---"
 git pull origin master
 
-echo "--- 🛠️  Building and Re-starting Dashboard + Ollama ---"
-# This brings up everything in the docker-compose.yml
+echo "--- 🛡️  Ensuring Port 11434 is free (Killing native Ollama) ---"
+# This is the 'Self-Healing' part: stop the native service if it's squatting on the port
+sudo systemctl stop ollama > /dev/null 2>&1
+
+echo "--- 🛠️  Rebuilding & Restarting Stack ---"
 docker compose up --build -d --remove-orphans
 
 if [ $? -eq 0 ]; then
-    echo "--- ✅ Stack is Primed ---"
-    echo "--- 📊 Dashboard: http://192.168.1.11:8050 ---"
-    echo "--- 🧠 Ollama API: http://192.168.1.11:11434 ---"
+    echo "--- ⏳ Waiting for Ollama container to initialize... ---"
+    sleep 8 # Increased sleep to ensure the server is ready
     
-    # Check if the models are loaded
-    echo "--- 📦 Currently Loaded Models: ---"
+    echo "--- 🧠 Priming qwen:1.8b model into VRAM ---"
+    # Remove the -d and actually wait for a response to ensure VRAM allocation
+    docker exec ollama_jetson ollama run qwen:1.8b "Generate a one-sentence greeting." > /dev/null
+    
+    echo "--- ✅ Stack is Primed & Healing Enabled ---"
+    echo "--- 📊 Dashboard: http://192.168.1.11:8050 ---"
+    
+    echo "--- 📦 Currently Loaded Models (Inside Docker): ---"
     docker exec ollama_jetson ollama ps
 else
     echo "--- ❌ ERROR: Deployment failed. ---"

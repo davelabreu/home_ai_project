@@ -18,11 +18,20 @@ services:
               capabilities: [gpu]
   
   ollama:
-    image: ollama/ollama:latest
-    container_name: ollama_jetson
-    restart: always
-    runtime: nvidia
-    ports:
-      - "11434:11434"
-    volumes:
-      - ~/.ollama:/root/.ollama
+      image: ollama/ollama:latest
+      container_name: ollama_jetson
+      restart: always
+      runtime: nvidia
+      ports:
+        - "11434:11434"
+      volumes:
+        - ~/.ollama:/root/.ollama
+      environment:
+        - OLLAMA_KEEP_ALIVE=-1  # Keeps the model loaded indefinitely
+      deploy:
+        resources:
+          reservations:
+            devices:
+              - driver: nvidia
+                count: all
+                capabilities: [gpu]
