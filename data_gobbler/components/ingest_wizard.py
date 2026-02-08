@@ -60,6 +60,7 @@ def render_ingest_wizard():
      Output("wizard-file-info", "children"),
      Output("url", "pathname")],
     [Input("open-wizard-btn", "n_clicks"),
+     Input("home-ingest-btn", "n_clicks"),
      Input("wizard-cancel", "n_clicks"),
      Input("wizard-submit", "n_clicks"),
      Input("wizard-upload", "contents"),
@@ -68,7 +69,7 @@ def render_ingest_wizard():
      State("wizard-upload", "filename")],
     prevent_initial_call=True
 )
-def handle_wizard_logic(n_open, n_cancel, n_submit, contents, project_id, is_open, filename):
+def handle_wizard_logic(n_open_nav, n_open_home, n_cancel, n_submit, contents, project_id, is_open, filename):
     ctx = dash.callback_context
     if not ctx.triggered:
         return is_open, dash.no_update, True, "", dash.no_update
@@ -76,11 +77,8 @@ def handle_wizard_logic(n_open, n_cancel, n_submit, contents, project_id, is_ope
     trigger = ctx.triggered[0]['prop_id']
 
     # 1. Open/Close Logic
-    if "open-wizard-btn" in trigger and n_open:
+    if ("open-wizard-btn" in trigger or "home-ingest-btn" in trigger) and (n_open_nav or n_open_home):
         return True, "", True, "", dash.no_update
-    
-    if "wizard-cancel" in trigger and n_cancel:
-        return False, "", True, "", dash.no_update
 
     # 2. Submission Logic (The actual 'Gobbling')
     if "wizard-submit" in trigger and contents and project_id:

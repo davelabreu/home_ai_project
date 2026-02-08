@@ -19,7 +19,8 @@ layout = dbc.Container([
                     className="text-muted"
                 ),
                 html.Div([
-                    dbc.Button("📊 View Analysis", href="/work-logs", color="primary", size="lg", outline=True),
+                    dbc.Button("🚀 Getting Started (Upload data now!)", id="home-ingest-btn", color="success", size="lg", className="me-3"),
+                    dbc.Button("📊 View Data & Analysis", href="/work-logs", color="primary", size="lg", outline=True),
                 ], className="mt-4")
             ], className="p-5 bg-dark border rounded-3 shadow")
         ], width=12)
