@@ -546,6 +546,118 @@ def command_reboot():
 
 
 
+@app.route('/api/power_mode', methods=['GET'])
+def get_power_mode():
+    """
+    Returns the current NVPModel power mode and all available modes.
+    On Windows, forwards the request to the Jetson.
+    """
+    if sys.platform.startswith('win'):
+        if not MONITOR_TARGET_HOST:
+            return jsonify({'error': 'MONITOR_TARGET_HOST is not set.'}), 400
+        try:
+            response = requests.get(f"http://{MONITOR_TARGET_HOST}:{MONITOR_TARGET_PORT}/api/power_mode")
+            return jsonify(response.json()), response.status_code
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    try:
+        # Get current power mode
+        result = subprocess.run(['nvpmodel', '-q'], capture_output=True, text=True, timeout=5)
+        if result.returncode != 0:
+            return jsonify({'error': f'nvpmodel query failed: {result.stderr}'}), 500
+
+        current_name = None
+        current_id = None
+        for line in result.stdout.splitlines():
+            line = line.strip()
+            if line.startswith('NV Power Mode:'):
+                current_name = line.split(':', 1)[1].strip()
+            elif line.isdigit():
+                current_id = int(line)
+
+        # Parse available modes from /etc/nvpmodel.conf
+        modes = []
+        conf_path = '/etc/nvpmodel.conf'
+        if os.path.exists(conf_path):
+            with open(conf_path, 'r') as f:
+                for conf_line in f:
+                    conf_line = conf_line.strip()
+                    if conf_line.startswith('< POWER_MODEL'):
+                        # Parse: < POWER_MODEL ID=0 NAME=15W >
+                        id_match = re.search(r'ID=(\d+)', conf_line)
+                        name_match = re.search(r'NAME=(\S+)', conf_line)
+                        if id_match and name_match:
+                            modes.append({
+                                'id': int(id_match.group(1)),
+                                'name': name_match.group(1)
+                            })
+
+        return jsonify({
+            'current_id': current_id,
+            'current_name': current_name,
+            'modes': modes
+        })
+    except Exception as e:
+        app_logger.error(f"Failed to get power mode: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/power_mode', methods=['POST'])
+def set_power_mode():
+    """
+    Sets the NVPModel power mode.
+    Expects JSON body: { "mode_id": <int> }
+    """
+    if sys.platform.startswith('win'):
+        if not MONITOR_TARGET_HOST:
+            return jsonify({'error': 'MONITOR_TARGET_HOST is not set.'}), 400
+        try:
+            response = requests.post(
+                f"http://{MONITOR_TARGET_HOST}:{MONITOR_TARGET_PORT}/api/power_mode",
+                json=request.json
+            )
+            return jsonify(response.json()), response.status_code
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    data = request.json
+    mode_id = data.get('mode_id')
+
+    if mode_id is None:
+        return jsonify({'error': 'mode_id is required'}), 400
+
+    try:
+        result = subprocess.run(
+            ['nvpmodel', '-m', str(mode_id)],
+            capture_output=True, text=True, timeout=15
+        )
+        if result.returncode != 0:
+            app_logger.error(f"nvpmodel set failed: {result.stderr}")
+            return jsonify({'error': f'Failed to set power mode: {result.stderr}'}), 500
+
+        # Verify the change
+        verify = subprocess.run(['nvpmodel', '-q'], capture_output=True, text=True, timeout=5)
+        new_name = None
+        new_id = None
+        for line in verify.stdout.splitlines():
+            line = line.strip()
+            if line.startswith('NV Power Mode:'):
+                new_name = line.split(':', 1)[1].strip()
+            elif line.isdigit():
+                new_id = int(line)
+
+        app_logger.info(f"Power mode changed to: {new_name} (ID: {new_id})")
+        return jsonify({
+            'message': f'Power mode set to {new_name}',
+            'current_id': new_id,
+            'current_name': new_name
+        })
+    except Exception as e:
+        app_logger.error(f"Failed to set power mode: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/chat', methods=['POST'])
 
 def chat_with_ollama():
