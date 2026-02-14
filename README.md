@@ -7,11 +7,12 @@ This `README.md` provides a high-level overview of the entire `home_ai_project`.
 *   `README.md`: High-level overview, vision, and roadmap.
 *   `scripts/`: Utility scripts, including `get_stats.py` for hardware metrics and `ollama_chat.py`.
 *   `web_monitor/`: Ambidextrous web application (Flask/React) for monitoring and **service management**.
-*   `data_analyzer/`: Dash Plotly microservice for data visualization.
+*   `data_analyzer/`: Stable analytics microservice (Maintenance Mode).
+*   `data_gobbler/`: Experimental V2 **Engineering Workbench** (Modular Dash/Plotly).
 *   `docker-compose.yml`: Unified orchestration for all Jetson services.
 
 ## Vision
-To create a robust, simple home automation and AI companion system. The Jetson serves as the "Always-On" host and service manager, while the Main PC handles "Brain-Crunching" AI tasks. The system prioritizes Docker-centric management and straightforward, open-source-driven integrations.
+To create a robust, simple home automation and AI companion system. The Jetson serves as the "Always-On" host and service manager, while the Main PC handles "Brain-Crunching" AI tasks. The system prioritizes Docker-centric management, deep engineering telemetry, and a "Move Fast" philosophy for data analysis.
 
 ## Hardware Components
 *   **Jetson (Always-On Companion):**

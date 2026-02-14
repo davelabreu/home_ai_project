@@ -105,43 +105,44 @@ A specialized microservice for professional data analysis and home telemetry.
 *   **Future Vision**: Integrated lightweight LLM (on Jetson) for pre-plotting data organization and parsing.
 *   **Technologies**: Python Dash, Pandas, Plotly, Requests.
 
-### 3. `scripts/ollama_chat.py`
+### 3. `data_gobbler/` (V2 Modular Workbench)
 
-A utility script for command-line interaction with Ollama.
+The "Experimental V2" of the analytics vision, designed for high-performance engineering analysis.
 
-*   **Purpose**: Send prompts to an Ollama server and receive responses directly from the terminal.
-*   **Technologies**: Python, `requests`.
-*   **Usage**:
-    ```bash
-    python scripts/ollama_chat.py "Your prompt here" -m "model_name"
-    ```
-    (Defaults to `qwen:1.8b` if `-m` is not specified).
-*   **Configuration**: Uses `OLLAMA_HOST` environment variable, defaulting to `http://localhost:11434`.
-*   **Dependencies**: `requests` (Python).
+*   **Status**: Active Development (v0.4.1 Stable).
+*   **Purpose**: Modular multi-page workbench using Dash Pages and Bootstrap.
+*   **Context**: Managed via `data_gobbler/GEMINI.md` and `data_gobbler/BACKEND_ARCHITECTURE.md`.
+*   **Key Features**:
+    *   **Split-Pane UI**: Left Sidebar (Nav), Top Bar (Context), Right Inspector (Settings).
+    *   **Hierarchical Ingestion**: Organizes data by Subsystem and Test name.
+    *   **Deep Linking**: Auto-selection logic for instant plotting after upload.
+    *   **Custom Processors**: Built-in logic for complex signal decoding (e.g., Encoder Quadrature).
 
 ## Master Plan: Integration Strategy
 
 The project follows a Docker-centric workflow where `docker-compose.yml` is the single source of truth.
 
-### Phase 1: The "Always-On" Infrastructure
+### Phase 1: The "Always-On" Infrastructure (COMPLETE)
 Deploy **Netdata** and **Homepage** as sidecars to the existing AI services on the Jetson.
-- **Netdata**: Configured for NVIDIA Jetson with `pid: host` and specific volume mounts for hardware visibility.
-- **Homepage**: Connects to the Docker socket for auto-discovery and uses Netdata API for live widgets.
+- **Netdata**: Configured for NVIDIA Jetson hardware visibility.
+- **Homepage**: Unified entry point for all containers.
 
-### Phase 2: Configuration as Code
+### Phase 2: Configuration as Code (COMPLETE)
 Generate YAML configurations for Homepage:
-- **services.yaml**: Groups links into 'Core AI' (Ollama), 'Management' (Web Monitor, Netdata), and 'Remote' (Main PC).
-- **widgets.yaml**: Pulls Netdata metrics (GPU temps, CPU load) into the Homepage header.
+- **services.yaml**: Categorized links (Core AI, Management, Remote).
+- **widgets.yaml**: Real-time Netdata metrics in the header.
 
-### Phase 3: Telemetry & Specialized Widgets
-Advanced integration of Jetson-specific hardware stats (CPU load, GPU temperature, RAM usage) into Homepage using Netdata's 'chart' format.
+### Phase 3: AI Workbench & Advanced Telemetry (IN PROGRESS)
+- **Data Gobbler**: Implementation of the v2 modular architecture.
+- **Hierarchical Storage**: Moving from flat CSV lists to Subsystem/Test trees.
+- **No-Code Customization**: (Next) Trace renaming and visibility controls.
 
 ## Project Milestones
 
-### [v0.4.1] - 2026-02-08: Hierarchical Data & Split-Pane UI
+### [v0.4.1] - 2026-02-08: Hierarchical Workbench & Split-Pane UI
 - **Data Context**: Implemented deep Project -> Subsystem -> Test -> File organization.
 - **Modern UI**: Fixed Left Sidebar, Context Top-Bar, and Right Inspector panel.
-- **Workflow**: Seamless "Drop-to-Plot" automation with auto-selection.
+- **Workflow**: Seamless "Drop-to-Plot" automation with race-condition-proof auto-selection.
 
 ### [v0.2.0] - 2026-02-08: AI Workbench & Infrastructure Milestone
 - **Infrastructure Overhaul**: Deployed Netdata and Homepage as sidecars.
