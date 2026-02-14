@@ -17,6 +17,12 @@ services:
       - /run/jtop.sock:/run/jtop.sock # Allows jtop library to communicate with host jtop service
       - /home/abrooski/.ssh/abrooski_jetson:/root/.ssh/abrooski_jetson:ro # Mount SSH private key
       - /usr/bin/tegrastats:/usr/bin/tegrastats # Adding tegrastats access
+      - /usr/sbin/nvpmodel:/usr/sbin/nvpmodel:ro # NVPModel power mode control
+      - /etc/nvpmodel:/etc/nvpmodel:ro # NVPModel config directory (mode definitions)
+      - /etc/nvpmodel.conf:/etc/nvpmodel.conf # NVPModel config symlink
+      - /var/lib/nvpmodel:/var/lib/nvpmodel # NVPModel state (current mode tracking)
+      - /usr/lib/aarch64-linux-gnu/nvidia/libnvsocsys.so:/usr/lib/aarch64-linux-gnu/nvidia/libnvsocsys.so:ro # nvpmodel dependency
+      - /usr/lib/aarch64-linux-gnu/nvidia/libnvos.so:/usr/lib/aarch64-linux-gnu/nvidia/libnvos.so:ro # nvpmodel dependency
       - /sys:/sys
       - /dev:/dev
     environment: # New section for environment variables
