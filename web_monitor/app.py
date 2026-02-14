@@ -628,10 +628,22 @@ def set_power_mode():
         return jsonify({'error': 'mode_id is required'}), 400
 
     try:
+        # nvpmodel -m may prompt for reboot confirmation on certain modes,
+        # which blocks on stdin. We pipe "no" to decline and detect from
+        # stderr whether a reboot is required.
         result = subprocess.run(
             ['nvpmodel', '-m', str(mode_id)],
-            capture_output=True, text=True, timeout=15
+            capture_output=True, text=True, input='no\n', timeout=15
         )
+
+        combined_output = (result.stdout + result.stderr).lower()
+        if 'reboot required' in combined_output:
+            app_logger.info(f"Power mode {mode_id} requires a system reboot.")
+            return jsonify({
+                'error': f'Mode {mode_id} requires a full system reboot to activate. Use the Hard Reboot button after switching.',
+                'requires_reboot': True
+            }), 409
+
         if result.returncode != 0:
             app_logger.error(f"nvpmodel set failed: {result.stderr}")
             return jsonify({'error': f'Failed to set power mode: {result.stderr}'}), 500
