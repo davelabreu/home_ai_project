@@ -2,9 +2,20 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Quick Start for Agents
+
+**Before writing any code**, load the relevant context:
+1. Read this file (system overview)
+2. Read `docs/context-scopes/<service>.md` for the service you're modifying
+3. Read `docs/CONVENTIONS.md` if writing new code
+4. Check `docs/DECISIONS.md` if changing an existing pattern
+5. Follow `docs/SESSION_GUIDE.md` for session discipline
+
+Full documentation index: `docs/README.md`
+
 ## Project Overview
 
-Home AI Companion — a Docker-based home automation system running on an NVIDIA Jetson (192.168.1.11, always-on) with a Main PC (192.168.1.16) for heavy tasks. Three main microservices plus supporting infrastructure, all orchestrated via `docker-compose.yml`.
+Home AI Companion — a Docker-based home automation system running on an NVIDIA Jetson (192.168.1.11, always-on) with a Main PC (192.168.1.21) for heavy tasks. Three main microservices plus supporting infrastructure, all orchestrated via `docker-compose.yml`.
 
 ## Architecture
 
@@ -63,3 +74,21 @@ python3 app.py
 - **Python style**: Flask for web_monitor, Dash+Bootstrap (DARKLY theme) for data services. Each service has its own `requirements.txt` and `Dockerfile`.
 - **Environment**: `.env` file for `MONITOR_TARGET_HOST`, `MONITOR_TARGET_PORT`, `SSH_USERNAME`, `SSH_PRIVATE_KEY_PATH`. See `.env.example`.
 - **Git**: Semantic commits on `master` branch. Feature branching for larger work.
+
+## Documentation Framework
+
+```
+docs/
+├── README.md              # Index — start here
+├── ARCHITECTURE.md        # System topology, data flows, service responsibilities
+├── CONVENTIONS.md         # Coding standards, naming, patterns
+├── DECISIONS.md           # Architecture Decision Records (ADR) log
+├── ROADMAP.md             # Current priorities and next milestones
+├── SESSION_GUIDE.md       # How to run disciplined agentic coding sessions
+├── adr/                   # Individual ADR files
+│   └── TEMPLATE.md        # Copy this for new decisions
+└── context-scopes/        # Per-service context (load one per session)
+    ├── web_monitor.md     # Dashboard/Flask/React work
+    ├── data_gobbler.md    # Engineering workbench work
+    └── infrastructure.md  # Docker/deploy/networking work
+```

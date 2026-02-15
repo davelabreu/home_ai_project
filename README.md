@@ -1,80 +1,53 @@
-# Home AI Companion Project
+# Home AI Companion
 
-This `README.md` provides a high-level overview of the entire `home_ai_project`. For details on specific components, please refer to their respective README files.
+A Docker-based home automation and monitoring system running on an NVIDIA Jetson (always-on) with a Main PC for heavy tasks.
 
-## Project Structure
+## What It Does
 
-*   `README.md`: High-level overview, vision, and roadmap.
-*   `scripts/`: Utility scripts, including `get_stats.py` for hardware metrics and `ollama_chat.py`.
-*   `web_monitor/`: Ambidextrous web application (Flask/React) for monitoring and **service management**.
-*   `data_analyzer/`: Stable analytics microservice (Maintenance Mode).
-*   `data_gobbler/`: Experimental V2 **Engineering Workbench** (Modular Dash/Plotly).
-*   `docker-compose.yml`: Unified orchestration for all Jetson services.
+- **Dashboard** (`web_monitor`) — Real-time monitoring of CPU, GPU, memory, network devices, Docker containers, and power modes. Flask backend + React frontend. Works on both the Jetson (local control) and PC (remote management).
+- **Engineering Workbench** (`data_gobbler`) — Multi-project data ingestion and visualization platform for engineering analysis. Dash/Plotly with hierarchical CSV storage.
+- **Legacy Analytics** (`data_analyzer`) — Earlier analytics service, maintenance mode only.
+- **Supporting Services** — Ollama (local LLM), Netdata (telemetry), InfluxDB (metrics), Homepage (dashboard hub).
 
-## Vision
-To create a robust, simple home automation and AI companion system. The Jetson serves as the "Always-On" host and service manager, while the Main PC handles "Brain-Crunching" AI tasks. The system prioritizes Docker-centric management, deep engineering telemetry, and a "Move Fast" philosophy for data analysis.
+## Quick Start
 
-## Hardware Components
-*   **Jetson (Always-On Companion):**
-    *   IP Address: 192.168.1.11
-    *   Purpose: Local AI (QWEN), hardware monitoring (`jtop`), and **Docker Service Manager**.
-*   **Main PC (Brain-Cruncher):**
-    *   IP Address: 192.168.1.16 (Management Console)
-    *   Purpose: Large AI models, resource-intensive tasks, and remote monitoring target.
+### Deploy on Jetson
+```bash
+git clone <repo-url>
+cp .env.example .env        # Edit with your settings
+./deploy.sh                  # Interactive deployment menu
+```
 
-## Roadmap / To-Do
-### Phase 1: Foundational Access & Control
-- [x] Configure SSH access to Jetson.
-- [x] Implement Ambidextrous Web Monitor (Windows Dashboard + Jetson Host).
-- [x] Integrate `jetson-stats` (jtop) for robust hardware monitoring.
-- [x] Implement **Docker Service Manager** for one-click container control.
-- [ ] Set up Wake-on-LAN (WoL) for Main PC (Hardware accessory pending).
-- [ ] Establish secure remote desktop access to Main PC.
+### Local Development (PC)
+```bash
+# Web Monitor frontend
+cd web_monitor/frontend && npm install && npm run dev
 
-### Phase 2: AI Integration
-- [x] Deploy a lightweight QWEN model on Jetson via Ollama.
-- [x] Implement chat interface in the dashboard.
-- [ ] Develop a mechanism for Jetson to offload tasks to Main PC.
+# Any Python service
+cd web_monitor  # or data_gobbler, data_analyzer
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt && python3 app.py
+```
 
-### Phase 3: Infrastructure & Telemetry (Master Plan)
-- [x] Deploy Netdata for deep hardware telemetry on Jetson.
-- [x] Set up Homepage as a unified entry point/dashboard.
-- [x] Configure `services.yaml` and `widgets.yaml` for Homepage integration.
-- [x] Integrate **AI Workbench** (Data Analyzer) with real-time Netdata metrics.
+## Network
 
-### Phase 4: Advanced Analytics & Orchestration (In Progress)
-- [x] Transition AI Workbench to Modular Architecture (External Repo structure).
-- [x] Implement deep hierarchical data storage (Subsystem/Test).
-- [x] Create "One-Click Ingest" workflow with auto-plotting.
-- [ ] Develop custom visualization templates for specific log types.
-- [ ] Integrate lightweight LLM for automated data parsing/organization.
-- [ ] Set up Wake-on-LAN (WoL) for Main PC integration.
+| Host | IP | Role |
+|---|---|---|
+| Jetson | 192.168.1.11 | Always-on companion, runs all Docker services |
+| Main PC | 192.168.1.21 | Development, heavy compute, remote management |
 
-## Milestones
+## Services & Ports
 
-### [v0.4.1] - 2026-02-08
-**Hierarchical Workbench Milestone**
-- **Deep Context**: Added Subsystem -> Test -> File organization.
-- **Split-Pane UI**: Modern Left/Right sidebar layout for maximum plotting space.
-- **Auto-Ingest**: Fixed race conditions for instant data visualization.
+| Service | Port | URL |
+|---|---|---|
+| Dashboard | 8050 | `http://192.168.1.11:8050` |
+| Data Analyzer | 8051 | `http://192.168.1.11:8051` |
+| Data Gobbler | 8052 | `http://192.168.1.11:8052` |
+| Homepage | 3000 | `http://192.168.1.11:3000` |
+| Ollama | 11434 | `http://192.168.1.11:11434` |
+| Netdata | 19999 | `http://192.168.1.11:19999` |
+| InfluxDB | 8086 | `http://192.168.1.11:8086` |
 
-### [v0.2.0] - 2026-02-08
-**AI Workbench & Infrastructure Milestone**
-- **Unified Entry Point**: Homepage deployed as the primary dashboard.
-- **Microservice Expansion**: Data Analyzer refactored into a project-based workbench.
-- **Deep Telemetry**: Direct integration between AI Workbench and Netdata for hardware analysis.
-- **Persistent Data**: Host-backed storage for ingested logs and telemetry.
+## Documentation
 
-### [v0.1.0] - 2026-02-08
-**Stable Dashboard Baseline**
-- **Ambidextrous Architecture**: Unified code for Windows (PC) and Linux/Docker (Jetson).
-- **Hybrid Network Monitor**: Instant device listing via ARP cache with background "fleshing out" via Nmap and DNS.
-- **Hardware Integration**: Real-time Jetson stats (GPU, Temp, Power) via `jtop`.
-- **Service Management**: Full Docker container control (List/Restart) with self-restart safety logic.
-- **Remote Control**: Soft and Hard reboot capabilities for the Jetson host.
-
-## Security Considerations
-*   Firewall rules on all devices.
-*   Strong password policies and SSH key management.
-*   Consider VPN for external access.
-*   Secure storage for credentials (e.g., environment variables, dedicated secret manager).
+All project documentation lives in [`docs/`](docs/README.md). Agent context files (`CLAUDE.md`, `GEMINI.md`) at the repo root point there.

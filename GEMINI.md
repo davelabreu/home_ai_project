@@ -1,165 +1,94 @@
-# Gemini CLI Project Context: Home AI Companion Project
+# GEMINI.md
 
-This document provides an overview of the `home_ai_project`, detailing its purpose, architecture, key components, and operational instructions for the Gemini CLI.
+This file provides guidance to Gemini CLI when working with code in this repository.
+
+## Quick Start for Agents
+
+**Before writing any code**, load the relevant context:
+1. Read this file (system overview)
+2. Read `docs/context-scopes/<service>.md` for the service you're modifying
+3. Read `docs/CONVENTIONS.md` if writing new code
+4. Check `docs/DECISIONS.md` if changing an existing pattern
+5. Follow `docs/SESSION_GUIDE.md` for session discipline
+
+Full documentation index: `docs/README.md`
 
 ## Project Overview
 
-The `home_ai_project` is a home automation and AI companion system designed to leverage both an always-on Jetson device for lightweight tasks and a powerful Main PC for resource-intensive computational needs. The system aims to centralize control and monitoring while maintaining a focus on **simplicity and minimal complexity**.
+Home AI Companion — a Docker-based home automation system running on an NVIDIA Jetson (192.168.1.11, always-on) with a Main PC (192.168.1.21) for heavy tasks. Three main microservices plus supporting infrastructure, all orchestrated via `docker-compose.yml`.
 
-## Guiding Principles
+## Architecture
 
-*   **Simplicity First**: Jetson integration and dashboard features should be implemented as simply as possible. Avoid over-engineering or unnecessary layers of abstraction.
-*   **Leverage Open Source**: Use established libraries like `jetson-stats` (jtop) to simplify data collection from NVIDIA hardware, rather than manually parsing system logs or command output.
-*   **Low Complexity Dashboard**: The user interface should be clean, functional, and easy to maintain. We can take inspiration from projects like `jetson-stats-grafana-dashboard` for metrics and layout without necessarily adopting their entire stack (e.g., Prometheus/Grafana).
-*   **Docker-Centric Management**: Treat `docker-compose.yml` as the single source of truth for the Jetson's state. All services (Dashboard, Ollama, Analyzer, Agents) should be managed as Docker containers via the unified Service Manager panel.
-*   **Direct Communication**: Use straightforward HTTP calls and system commands (`subprocess`, `dbus-send`) rather than complex orchestration frameworks where possible.
+**web_monitor** — Flask backend + React/Vite/TypeScript frontend. The Flask app (`web_monitor/app.py`) serves the built React app from `frontend/dist` and exposes REST APIs for network status, Jetson GPU info, Docker service management, Ollama chat, and remote reboot. "Ambidextrous" design: adapts behavior for Windows (dev) vs Linux/Docker (production).
 
-## Key Hardware & Network Configuration
+**data_gobbler** — Active development. Dash/Plotly engineering workbench (v0.4.1). Multi-page app using `dash.page_registry`. Key pattern: modular components (`components/`), utilities (`utils/`), and per-page layouts (`pages/`). Data is hierarchical: `projects/[project_id]/[subsystem]/[test]/ingest_*.csv`. Uses split-pane UI with pattern-matching callbacks (`MATCH`, `ALL`) for dynamic plot cards. All dynamic components are rendered at boot and toggled with CSS visibility (hidden DOM rule).
 
-*   **Jetson (Always-On Companion)**: Targeted for local QWEN models, network management scripts, and Wake-on-LAN initiation. IP: 192.168.1.11.
-*   **Main PC (Brain-Cruncher)**: Used for larger AI models, resource-intensive tasks, and as a remote access target.
-*   **Network**: SSH access is configured for the Jetson. The system utilizes environment variables (e.g., `MONITOR_TARGET_HOST`, `OLLAMA_HOST`) for inter-component communication and configuration.
+**data_analyzer** — Maintenance mode. Earlier Dash/Plotly analytics service, kept stable at v0.2.2.
 
-## Core Components
+**Supporting services**: Ollama (local LLM, port 11434), Netdata (telemetry, port 19999), InfluxDB (metrics, port 8086), Homepage (dashboard, port 3000).
 
-### 1. `web_monitor/`
+## Port Mapping (host -> container)
 
-A client-server web application providing real-time monitoring and control. This application is designed to be **ambidextrous**, adapting its functionality based on the host operating system.
+| Service | Host Port | Container Port |
+|---|---|---|
+| dashboard (web_monitor) | 8050 | 5000 |
+| data_analyzer | 8051 | 8050 |
+| data_gobbler | 8052 | 8050 |
+| Homepage | 3000 | 3000 |
+| Ollama | 11434 | 11434 |
+| Netdata | 19999 | 19999 |
+| InfluxDB | 8086 | 8086 |
 
-*   **PC Dashboard (Windows)**:
-    *   Acts as a management console for the local PC.
-    *   **Remote Monitoring**: Fetches and displays data from the Jetson by forwarding requests to the Jetson's `web_monitor` instance via the `MONITOR_TARGET_HOST` IP.
-    *   **Remote Control**: Sends commands (like reboot) to the Jetson's API.
-    *   **Logic**: Does **not** contain direct SSH or host-level control logic (like `dbus-send`). It relies entirely on HTTP communication with the Jetson.
-*   **Host Webserver (Jetson/Linux)**:
-    *   Acts as the primary data source and control point for the Jetson hardware.
-    *   **Data Collection**: Historically used `tegrastats` parsing, but **preferred approach** is to leverage the `jetson-stats` (jtop) Python library for robust and simplified metric collection (inspired by `jetson-stats-grafana-dashboard`).
-    *   **System Control**: Executes host-level commands like `dbus-send` for reboots or `docker restart`.
-    *   **Internet Access**: Designed to eventually be deployed (e.g., via Docker) and exposed for secure access from the internet.
+## Build & Run Commands
 
-*   **Technologies**:
-    *   **Backend**: Python Flask (`app.py`). Handles API endpoints, system data collection, and serving the React frontend.
-    *   **Frontend**: React, built with Vite, using Shadcn UI components and Tailwind CSS.
-*   **Architecture & Logic**:
-    *   The Flask backend serves the compiled React application from `frontend/dist`.
-    *   Differentiates execution environments:
-        *   **PC (Windows)**: Does **not** contain Paramiko or direct SSH logic. It makes HTTP calls to the Jetson's `web_monitor` API for remote actions and data.
-        *   **Jetson (Ubuntu/Dockerized)**: Executes commands locally on the host via `subprocess` (e.g., `arp -a`, `tegrastats`) or uses `dbus-send` for system reboots. It handles Docker container restarts for soft reboots.
-    *   Relies on `MONITOR_TARGET_HOST` environment variable to determine if it should fetch data locally or forward requests to a remote host (Jetson).
-*   **Key API Endpoints**:
-    *   `/`: Serves the React frontend.
-    *   `/api/local_network_status`: Gathers local network device info.
-    *   `/api/remote_network_status`: Forwards network status request to `MONITOR_TARGET_HOST`.
-    *   `/api/local_system_info`: Gathers local CPU, memory, disk, uptime.
-    *   `/api/remote_system_info`: Forwards system info request to `MONITOR_TARGET_HOST`.
-    *   `/api/jetson_gpu_info`: Retrieves Jetson GPU stats. Uses `scripts/get_stats.py` (jtop) on Jetson; forwards from PC.
-    *   `/api/docker_services`: Lists running containers and their status.
-    *   `/api/docker_services/restart` (POST): Restarts a specific container by name.
-    *   `/api/command/reboot` (POST): Handles soft (Docker restart) and hard (system `dbus-send`) reboots on Jetson.
-    *   `/api/chat` (POST): Interacts with a local Ollama server.
-    *   `/api/config`: Provides environment configuration to the frontend.
+### Full Docker Deployment (on Jetson)
+```bash
+./deploy.sh                          # Interactive menu: full reset, selective rebuild, etc.
+docker compose up --build -d         # Build and start all services
+docker compose up -d --build $(docker compose config --services | grep -v ollama)  # Rebuild all except Ollama
+```
 
-*   **Helper Scripts**:
-    *   `scripts/get_stats.py`: A verified `jtop`-based script used by the backend to reliably extract Jetson hardware metrics (Temperature, Power, GPU Usage).
+### Web Monitor Frontend (local dev)
+```bash
+cd web_monitor/frontend
+npm install
+npm run dev       # Vite dev server
+npm run build     # Production build -> frontend/dist/
+npm run lint      # ESLint
+```
 
-*   **Target Metrics (Inspiration from `jetson-stats-grafana-dashboard`)**:
-    *   **Processor**: CPU usage (per-core and total), GPU usage (GR3D), and EMC (memory controller) usage.
-    *   **Memory**: RAM usage, Swap usage, and detailed memory frequency.
-    *   **Environment**: Temperature (CPU, GPU, Thermal Zones) and Fan speed/mode.
-    *   **Power**: Overall power consumption (VDD_IN) and individual rail power (VDD_CPU, VDD_GPU) if available.
+### Python Services (local dev)
+```bash
+cd web_monitor    # or data_gobbler, data_analyzer
+python3 -m venv .venv
+source .venv/bin/activate   # On Windows: .venv/Scripts/activate
+pip install -r requirements.txt
+python3 app.py
+```
 
-*   **Dependencies**: `Flask`, `psutil`, `requests`, `python-dotenv`, `Flask-Cors` (Python). Node.js, npm/yarn for frontend development.
-*   **Building & Running**:
-    *   **Backend**:
-        ```bash
-        cd web_monitor
-        python3 -m venv .venv
-        source .venv/bin/activate
-        pip install -r requirements.txt
-        python3 app.py
-        ```
-    *   **Frontend (Development)**:
-        ```bash
-        cd web_monitor/frontend
-        npm install
-        npm run dev
-        ```
-    *   **Frontend (Production Build)**:
-        ```bash
-        cd web_monitor/frontend
-        npm run build
-        ```
+## Key Conventions
 
-### 2. `data_analyzer/` (AI Workbench)
+- **Dash callbacks**: Use `@callback` decorators with pattern-matching IDs (`{"type": "...", "index": MATCH}`). All dynamic UI elements are pre-rendered and hidden, not created dynamically.
+- **Data storage**: CSV files under `projects/` directories with structure `project_id/subsystem/test/ingest_YYYY-MM-DD_HH-MM.csv`.
+- **Frontend stack**: React 19, Tailwind CSS 4, Shadcn UI components, Lucide icons. Vite is aliased to rolldown-vite.
+- **Python style**: Flask for web_monitor, Dash+Bootstrap (DARKLY theme) for data services. Each service has its own `requirements.txt` and `Dockerfile`.
+- **Environment**: `.env` file for `MONITOR_TARGET_HOST`, `MONITOR_TARGET_PORT`, `SSH_USERNAME`, `SSH_PRIVATE_KEY_PATH`. See `.env.example`.
+- **Git**: Semantic commits on `master` branch. Feature branching for larger work.
 
-A specialized microservice for professional data analysis and home telemetry.
+## Documentation Framework
 
-*   **Status**: Maintenance/Production Mode (Active development moved to standalone repo).
-*   **Purpose**: Multi-project data ingestion, persistent storage, and visualization.
-*   **Context**: Managed via `data_analyzer/GEMINI.md`.
-*   **Key Features**:
-    *   **Project Registry**: Dynamic loading of projects from `projects.json`.
-    *   **Data Library**: Automatic listing of historical ingested files in the sidebar.
-    *   **Jetson Telemetry Fetcher**: Direct API integration with Netdata for hardware stats.
-    *   **Persistence**: Data saved to host disk via Docker volumes.
-*   **Future Vision**: Integrated lightweight LLM (on Jetson) for pre-plotting data organization and parsing.
-*   **Technologies**: Python Dash, Pandas, Plotly, Requests.
-
-### 3. `data_gobbler/` (V2 Modular Workbench)
-
-The "Experimental V2" of the analytics vision, designed for high-performance engineering analysis.
-
-*   **Status**: Active Development (v0.4.1 Stable).
-*   **Purpose**: Modular multi-page workbench using Dash Pages and Bootstrap.
-*   **Context**: Managed via `data_gobbler/GEMINI.md` and `data_gobbler/BACKEND_ARCHITECTURE.md`.
-*   **Key Features**:
-    *   **Split-Pane UI**: Left Sidebar (Nav), Top Bar (Context), Right Inspector (Settings).
-    *   **Hierarchical Ingestion**: Organizes data by Subsystem and Test name.
-    *   **Deep Linking**: Auto-selection logic for instant plotting after upload.
-    *   **Custom Processors**: Built-in logic for complex signal decoding (e.g., Encoder Quadrature).
-
-## Master Plan: Integration Strategy
-
-The project follows a Docker-centric workflow where `docker-compose.yml` is the single source of truth.
-
-### Phase 1: The "Always-On" Infrastructure (COMPLETE)
-Deploy **Netdata** and **Homepage** as sidecars to the existing AI services on the Jetson.
-- **Netdata**: Configured for NVIDIA Jetson hardware visibility.
-- **Homepage**: Unified entry point for all containers.
-
-### Phase 2: Configuration as Code (COMPLETE)
-Generate YAML configurations for Homepage:
-- **services.yaml**: Categorized links (Core AI, Management, Remote).
-- **widgets.yaml**: Real-time Netdata metrics in the header.
-
-### Phase 3: AI Workbench & Advanced Telemetry (IN PROGRESS)
-- **Data Gobbler**: Implementation of the v2 modular architecture.
-- **Hierarchical Storage**: Moving from flat CSV lists to Subsystem/Test trees.
-- **No-Code Customization**: (Next) Trace renaming and visibility controls.
-
-## Project Milestones
-
-### [v0.4.1] - 2026-02-08: Hierarchical Workbench & Split-Pane UI
-- **Data Context**: Implemented deep Project -> Subsystem -> Test -> File organization.
-- **Modern UI**: Fixed Left Sidebar, Context Top-Bar, and Right Inspector panel.
-- **Workflow**: Seamless "Drop-to-Plot" automation with race-condition-proof auto-selection.
-
-### [v0.2.0] - 2026-02-08: AI Workbench & Infrastructure Milestone
-- **Infrastructure Overhaul**: Deployed Netdata and Homepage as sidecars.
-- **AI Workbench Launch**: Refactored Data Analyzer into a project-based analytics platform.
-- **Telemetry Integration**: Real-time hardware performance fetching (Power, Freq, Uptime).
-- **Persistence Foundation**: Established Docker-backed file storage for analytical data.
-
-### [v0.1.0] - 2026-02-08: Stable Dashboard Release
-- **Ambidextrous Architecture**: PC (Windows) management vs Jetson (Linux) control.
-- **Hybrid Network Monitor**: Fast ARP status + Background Deep Scan (Nmap/DNS).
-- **Jetson Hardware Metrics**: Real-time integration via `jtop`.
-- **Service Management**: Docker container control and self-restart safety.
-- **System Control**: Remote reboot (Soft/Hard) via `dbus-send`.
-
-## General Project Conventions
-
-*   **Virtual Environments**: Python dependencies are managed using virtual environments (`.venv/`) within each component directory.
-*   **Configuration**: Environment variables (e.g., via `.env` files) are used for sensitive information and host-specific configurations.
-*   **Microservices**: Clear separation of functionalities into independent, deployable services.
-*   **Docker Integration**: The presence of `docker-compose.yml` and `Dockerfile` in `web_monitor/` suggests containerized deployment for at least the `web_monitor` application, especially on the Jetson.
+```
+docs/
+├── README.md              # Index — start here
+├── ARCHITECTURE.md        # System topology, data flows, service responsibilities
+├── CONVENTIONS.md         # Coding standards, naming, patterns
+├── DECISIONS.md           # Architecture Decision Records (ADR) log
+├── ROADMAP.md             # Current priorities and next milestones
+├── SESSION_GUIDE.md       # How to run disciplined agentic coding sessions
+├── adr/                   # Individual ADR files
+│   └── TEMPLATE.md        # Copy this for new decisions
+└── context-scopes/        # Per-service context (load one per session)
+    ├── web_monitor.md     # Dashboard/Flask/React work
+    ├── data_gobbler.md    # Engineering workbench work
+    └── infrastructure.md  # Docker/deploy/networking work
+```
