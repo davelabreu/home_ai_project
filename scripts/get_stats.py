@@ -21,12 +21,19 @@ def main():
             if jetson.ok():
                 print("DEBUG: jtop status OK", file=sys.stderr)
                 # default=str converts datetime objects into ISO format strings
+                
+                # In jtop 4.x, some attributes are dictionary-like objects
+                def to_dict(obj):
+                    if hasattr(obj, 'items'):
+                        return {k: v for k, v in obj.items()}
+                    return obj
+
                 data = {
                     "stats": jetson.stats,
-                    "fan": jetson.fan.get() if hasattr(jetson, 'fan') else {},
+                    "fan": to_dict(jetson.fan) if hasattr(jetson, 'fan') else {},
                     "clocks": jetson.jetson_clocks if hasattr(jetson, 'jetson_clocks') else "unknown",
-                    "power": jetson.power if hasattr(jetson, 'power') else {},
-                    "temperature": jetson.temperature if hasattr(jetson, 'temperature') else {}
+                    "power": to_dict(jetson.power) if hasattr(jetson, 'power') else {},
+                    "temperature": to_dict(jetson.temperature) if hasattr(jetson, 'temperature') else {}
                 }
                 print(json.dumps(data, default=str))
                 print("DEBUG: data printed to stdout", file=sys.stderr)
