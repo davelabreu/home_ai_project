@@ -15,6 +15,7 @@ Core infrastructure is solid (v0.4.1). Next priorities: polish the dashboard UX,
 - Ollama chat integration (qwen:1.8b)
 - Hybrid network monitor (ARP + Nmap deep scan)
 - Soft/Hard reboot from dashboard
+- Hardware Sentinel thermal monitoring and active controls (Turbo/Fan)
 - Homepage as unified entry point
 - Netdata → InfluxDB telemetry pipeline
 - data_gobbler hierarchical workbench with split-pane UI
@@ -34,6 +35,8 @@ Core infrastructure is solid (v0.4.1). Next priorities: polish the dashboard UX,
 ### P0 — Next Up
 | Task | Service | Notes |
 |---|---|---|
+| PC Dashboard Restoration | web_monitor | Restore Jetson stat visibility on PC view; fix config loading hang |
+| InfluxDB Jetson Stats | web_monitor | Implement historical data storage for jtop metrics |
 | Trace Inspector (rename/visibility) | data_gobbler | Offcanvas panel is stubbed, needs column-level controls |
 | Clean up CORS | web_monitor | Make dynamic based on MONITOR_TARGET_HOST |
 | Remove dead code | web_monitor | Delete legacy templates/index.html, remove paramiko from package.json |

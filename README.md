@@ -34,7 +34,7 @@ pip install -r requirements.txt && python3 app.py
 | Host | IP | Role |
 |---|---|---|
 | Jetson | 192.168.1.11 | Always-on companion, runs all Docker services |
-| Main PC | 192.168.1.21 | Development, heavy compute, remote management |
+| Main PC | 192.168.1.2 | Development, heavy compute, remote management |
 
 ## Services & Ports
 

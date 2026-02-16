@@ -55,7 +55,7 @@ app = Flask(
     template_folder=os.path.join(basedir, 'frontend', 'dist') # Serve index.html from React's build output
 )
 
-CORS(app, origins=["http://localhost:5000", "http://192.168.1.21:5000"]) # Enable CORS for all routes
+CORS(app, origins=["http://localhost:5000", "http://192.168.1.21:5000", "http://192.168.1.2:5000"]) # Enable CORS for all routes
 
 # execute_ssh_command function removed.
 

@@ -1,7 +1,7 @@
 # Architecture Overview
 
 ## BLUF
-Three Docker microservices on an NVIDIA Jetson (192.168.1.11) + a mirrored dashboard on Main PC (192.168.1.21). Flask backends, React/Dash frontends, all orchestrated via `docker-compose.yml`. The Jetson is always-on; the PC is for heavy tasks.
+Three Docker microservices on an NVIDIA Jetson (192.168.1.11) + a mirrored dashboard on Main PC (192.168.1.2). Flask backends, React/Dash frontends, all orchestrated via `docker-compose.yml`. The Jetson is always-on; the PC is for heavy tasks.
 
 ---
 
@@ -9,7 +9,7 @@ Three Docker microservices on an NVIDIA Jetson (192.168.1.11) + a mirrored dashb
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  Main PC (192.168.1.21) — Windows                       │
+│  Main PC (192.168.1.2) — Windows                       │
 │  ┌─────────────────────────────────┐                    │
 │  │ web_monitor (dev mode)          │                    │
 │  │ Flask :5000 + React frontend    │──── HTTP ────┐     │

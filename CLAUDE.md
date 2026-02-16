@@ -15,7 +15,7 @@ Full documentation index: `docs/README.md`
 
 ## Project Overview
 
-Home AI Companion — a Docker-based home automation system running on an NVIDIA Jetson (192.168.1.11, always-on) with a Main PC (192.168.1.21) for heavy tasks. Three main microservices plus supporting infrastructure, all orchestrated via `docker-compose.yml`.
+Home AI Companion — a Docker-based home automation system running on an NVIDIA Jetson (192.168.1.11, always-on) with a Main PC (192.168.1.2) for heavy tasks. Three main microservices plus supporting infrastructure, all orchestrated via `docker-compose.yml`.
 
 ## Architecture
 
