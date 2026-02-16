@@ -285,53 +285,35 @@ def get_local_system_info():
 def get_jetson_gpu_info():
     """
     Retrieves and returns GPU and system information from the Jetson.
-    Uses the scripts/get_stats.py helper script for reliable data collection.
     """
     if sys.platform.startswith('win'):
-        # On Windows, forward the request to the Jetson
         if not MONITOR_TARGET_HOST:
-            return jsonify({'error': 'MONITOR_TARGET_HOST is not set for remote GPU info.'}), 400
-        
+            return jsonify({'error': 'MONITOR_TARGET_HOST is not set.'}), 400
         try:
             remote_url = f"http://{MONITOR_TARGET_HOST}:{MONITOR_TARGET_PORT}/api/jetson_gpu_info"
-            app_logger.info(f"Forwarding GPU info request to Jetson: {remote_url}")
             response = requests.get(remote_url)
             response.raise_for_status()
             return jsonify(response.json())
-        except requests.exceptions.RequestException as e:
-            app_logger.error(f"Error forwarding GPU info request to {MONITOR_TARGET_HOST}: {e}")
-            return jsonify({'error': f"Could not connect to remote host {MONITOR_TARGET_HOST} for GPU info: {e}"}), 500
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
     
-    # Running on Jetson - use the helper script
     try:
-        # Resolve path to the script.
         script_path = os.path.join(basedir, 'scripts', 'get_stats.py')
-        
         if not os.path.exists(script_path):
             script_path = os.path.abspath(os.path.join(basedir, '..', 'scripts', 'get_stats.py'))
         
-        app_logger.info(f"Executing stats helper script: {script_path}")
-        # Run without check=True to handle errors manually for better logging
         result = subprocess.run(['python3', script_path], capture_output=True, text=True)
-        
         if result.returncode != 0:
-            app_logger.error(f"Stats script failed (code {result.returncode}). Stderr: {result.stderr}")
             return jsonify({'error': f"Script failed: {result.stderr}"}), 500
         
-        if not result.stdout.strip():
-            app_logger.error(f"Stats script returned empty output. Stderr: {result.stderr}")
-            return jsonify({'error': "Empty output from stats script"}), 500
-
-        stats = json.loads(result.stdout)
+        raw_data = json.loads(result.stdout)
+        stats = raw_data.get('stats', {})
         
-        # Map the helper script's output to the frontend's expected format
-        # RAM usage from script is a fraction (e.g. 0.62), we need to handle total ram separately
-        # We'll use psutil for total ram to calculate the MB usage correctly
         total_ram_gb = psutil.virtual_memory().total / (1024**3)
         
         response_data = {
             'gpu_usage_percent': stats.get('GPU', 0),
-            'gpu_clock_mhz': stats.get('GR3D_FREQ', 0), # Note: If your script doesn't output this yet, it's 0
+            'gpu_clock_mhz': stats.get('GR3D_FREQ', 0),
             'gpu_percent': stats.get('GPU', 0),
             'emc_percent': stats.get('EMC', 0),
             'gpu_temp_c': stats.get('Temp gpu', 0),
@@ -339,13 +321,143 @@ def get_jetson_gpu_info():
             'ram_usage_mb': round(stats.get('RAM', 0) * total_ram_gb * 1024, 2),
             'ram_total_mb': round(total_ram_gb * 1024, 2),
             'jtop_active': True,
-            'raw_stats': stats # Optional: include for debugging
+            'raw_stats': stats
         }
-        
         return jsonify(response_data)
-
     except Exception as e:
-        app_logger.error(f"Failed to retrieve GPU info via helper script: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/hardware_sentinel')
+def get_hardware_sentinel():
+    """
+    Aggregates thermal zones, fan status, and swap pressure for Hardware Sentinel.
+    """
+    if sys.platform.startswith('win'):
+        if not MONITOR_TARGET_HOST:
+            return jsonify({'error': 'MONITOR_TARGET_HOST is not set.'}), 400
+        try:
+            remote_url = f"http://{MONITOR_TARGET_HOST}:{MONITOR_TARGET_PORT}/api/hardware_sentinel"
+            response = requests.get(remote_url)
+            response.raise_for_status()
+            return jsonify(response.json())
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    try:
+        script_path = os.path.join(basedir, 'scripts', 'get_stats.py')
+        if not os.path.exists(script_path):
+            script_path = os.path.abspath(os.path.join(basedir, '..', 'scripts', 'get_stats.py'))
+        
+        result = subprocess.run(['python3', script_path], capture_output=True, text=True)
+        raw_data = json.loads(result.stdout)
+        
+        # Extract specific data for Sentinel
+        stats = raw_data.get('stats', {})
+        fan = raw_data.get('fan', {})
+        clocks = raw_data.get('clocks', {})
+        temp = raw_data.get('temperature', {})
+        
+        # Safety Logic: Auto-throttle if > 82°C
+        max_temp = max(temp.values()) if temp else 0
+        if max_temp > 82:
+            app_logger.warning(f"CRITICAL TEMPERATURE DETECTED: {max_temp}°C. Triggering safety guardrails.")
+            try:
+                if JTOP_AVAILABLE:
+                    with jtop() as jetson:
+                        jetson.jetson_clocks = False
+                        jetson.fan.profile = 'cool'
+                else:
+                    subprocess.run(['jetson_clocks', '--restore'], capture_output=True)
+                    subprocess.run(['jtop', '--fan', 'cool'], capture_output=True)
+            except Exception as e:
+                app_logger.error(f"Failed to trigger safety guardrails: {e}")
+
+        return jsonify({
+            'thermals': temp,
+            'fan': fan,
+            'clocks': clocks,
+            'swap': {
+                'usage': stats.get('SWAP', 0),
+                'total_gb': round(psutil.swap_memory().total / (1024**3), 2),
+                'used_gb': round(psutil.swap_memory().used / (1024**3), 2)
+            },
+            'timestamp': datetime.datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/hardware_sentinel/turbo', methods=['POST'])
+def set_turbo_mode():
+    """
+    Toggles jetson_clocks (Turbo Mode).
+    """
+    if sys.platform.startswith('win'):
+        if not MONITOR_TARGET_HOST:
+            return jsonify({'error': 'MONITOR_TARGET_HOST is not set.'}), 400
+        try:
+            response = requests.post(f"http://{MONITOR_TARGET_HOST}:{MONITOR_TARGET_PORT}/api/hardware_sentinel/turbo", json=request.json)
+            return jsonify(response.json()), response.status_code
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    data = request.json
+    enabled = data.get('enabled', False)
+    try:
+        if JTOP_AVAILABLE:
+            with jtop() as jetson:
+                jetson.jetson_clocks = enabled
+        else:
+            # Fallback to command line
+            if enabled:
+                subprocess.run(['jetson_clocks'], check=True)
+            else:
+                subprocess.run(['jetson_clocks', '--restore'], check=True)
+        
+        app_logger.info(f"Turbo Mode (jetson_clocks) set to: {enabled}")
+        return jsonify({'status': 'success', 'enabled': enabled})
+    except Exception as e:
+        app_logger.error(f"Failed to set Turbo Mode: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/hardware_sentinel/fan', methods=['POST'])
+def set_fan_mode():
+    """
+    Sets fan profiles (Quiet, Cool, Manual).
+    """
+    if sys.platform.startswith('win'):
+        if not MONITOR_TARGET_HOST:
+            return jsonify({'error': 'MONITOR_TARGET_HOST is not set.'}), 400
+        try:
+            response = requests.post(f"http://{MONITOR_TARGET_HOST}:{MONITOR_TARGET_PORT}/api/hardware_sentinel/fan", json=request.json)
+            return jsonify(response.json()), response.status_code
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    data = request.json
+    mode = data.get('mode', 'quiet').lower()
+    speed = data.get('speed', 50)
+
+    try:
+        if JTOP_AVAILABLE:
+            with jtop() as jetson:
+                if mode == 'manual':
+                    jetson.fan.mode = 'manual'
+                    jetson.fan.speed = speed
+                else:
+                    jetson.fan.profile = mode
+        else:
+            # Fallback to command line if available
+            if mode == 'manual':
+                subprocess.run(['jtop', '--fan', 'manual', 'speed', str(speed)], check=True)
+            else:
+                subprocess.run(['jtop', '--fan', mode], check=True)
+
+        app_logger.info(f"Fan mode set to: {mode} (speed: {speed if mode == 'manual' else 'N/A'})")
+        return jsonify({'status': 'success', 'mode': mode})
+    except Exception as e:
+        app_logger.error(f"Failed to set Fan mode: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/remote_system_info')

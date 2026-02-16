@@ -21,8 +21,15 @@ def main():
             if jetson.ok():
                 print("DEBUG: jtop status OK", file=sys.stderr)
                 # default=str converts datetime objects into ISO format strings
-                print(json.dumps(jetson.stats, default=str))
-                print("DEBUG: stats printed to stdout", file=sys.stderr)
+                data = {
+                    "stats": jetson.stats,
+                    "fan": jetson.fan.get() if hasattr(jetson, 'fan') else {},
+                    "clocks": jetson.jetson_clocks if hasattr(jetson, 'jetson_clocks') else "unknown",
+                    "power": jetson.power if hasattr(jetson, 'power') else {},
+                    "temperature": jetson.temperature if hasattr(jetson, 'temperature') else {}
+                }
+                print(json.dumps(data, default=str))
+                print("DEBUG: data printed to stdout", file=sys.stderr)
             else:
                 print("DEBUG: jtop status NOT OK", file=sys.stderr)
                 print(json.dumps({"error": "Could not connect to jetson_stats"}))

@@ -8,6 +8,7 @@ import { useConfig } from './hooks/useConfig';
 import FaviconChanger from './components/FaviconChanger';
 import ChatCard from './components/ChatCard';
 import GpuInfoCard from './components/GpuInfoCard'; // Import GpuInfoCard
+import HardwareSentinelCard from './components/HardwareSentinelCard'; // Import HardwareSentinelCard
 import { useGpuInfo } from './hooks/useGpuInfo'; // Import useGpuInfo
 import DockerServiceManager from './components/DockerServiceManager'; // Import DockerServiceManager
 import PowerModeCard from './components/PowerModeCard';
@@ -133,16 +134,19 @@ function App() {
 
               {/* Jetson Power Mode (local Jetson view) */}
               {isJetsonApp && (
-                <PowerModeCard
-                  currentId={powerMode.powerMode?.current_id ?? null}
-                  currentName={powerMode.powerMode?.current_name ?? null}
-                  modes={powerMode.powerMode?.modes ?? []}
-                  loading={powerMode.loading}
-                  error={powerMode.error}
-                  switching={powerMode.switching}
-                  onSwitchMode={powerMode.switchMode}
-                  onToast={handleToast}
-                />
+                <>
+                  <HardwareSentinelCard />
+                  <PowerModeCard
+                    currentId={powerMode.powerMode?.current_id ?? null}
+                    currentName={powerMode.powerMode?.current_name ?? null}
+                    modes={powerMode.powerMode?.modes ?? []}
+                    loading={powerMode.loading}
+                    error={powerMode.error}
+                    switching={powerMode.switching}
+                    onSwitchMode={powerMode.switchMode}
+                    onToast={handleToast}
+                  />
+                </>
               )}
 
               {/* Remote System Info & GPU Status */}
@@ -156,6 +160,7 @@ function App() {
                     onHardRebootClick={handleHardReboot}
                     onSoftRebootClick={handleSoftReboot}
                   />
+                  <HardwareSentinelCard />
                   <GpuInfoCard
                     title="Jetson GPU"
                     gpuInfo={gpu.gpuInfo}
