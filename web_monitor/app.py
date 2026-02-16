@@ -377,7 +377,9 @@ def get_hardware_sentinel():
         temp = raw_data.get('temperature', {})
         
         # Safety Logic: Auto-throttle if > 82°C
-        max_temp = max(temp.values()) if temp else 0
+        # Extract numerical temp values from nested dicts: {"cpu": {"temp": 53.4, "online": True}}
+        temp_values = [v['temp'] for v in temp.values() if isinstance(v, dict) and 'temp' in v]
+        max_temp = max(temp_values) if temp_values else 0
         if max_temp > 82:
             app_logger.warning(f"CRITICAL TEMPERATURE DETECTED: {max_temp}°C. Triggering safety guardrails.")
             try:

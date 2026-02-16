@@ -46,7 +46,7 @@ const HardwareSentinelCard: React.FC = () => {
     return 'bg-red-500/20 border-red-500/40';
   };
 
-  const maxTemp = data ? Math.max(...Object.values(data.thermals)) : 0;
+  const maxTemp = data ? Math.max(...Object.values(data.thermals).map((v: any) => v.temp)) : 0;
   const isDangerous = maxTemp > 75;
   const isCritical = maxTemp > 82;
 
@@ -61,6 +61,9 @@ const HardwareSentinelCard: React.FC = () => {
     setLocalFanMode(mode);
     await updateFan(mode, mode === 'manual' ? localFanSpeed : undefined);
   };
+
+  // Helper to extract nested temp value
+  const getTemp = (val: any) => (typeof val === 'object' ? val.temp : val);
 
   return (
     <Card className={`min-h-[400px] transition-all duration-500 ${isCritical ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]' : ''}`}>
@@ -85,12 +88,15 @@ const HardwareSentinelCard: React.FC = () => {
             <span>THERMAL ZONES</span>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            {data && Object.entries(data.thermals).map(([zone, temp]) => (
-              <div key={zone} className={`flex flex-col p-2 rounded border transition-colors ${getTempBg(temp)}`}>
-                <span className="text-[10px] uppercase text-muted-foreground font-medium">{zone}</span>
-                <span className={`text-sm font-mono ${getTempColor(temp)}`}>{temp.toFixed(1)}°C</span>
-              </div>
-            ))}
+            {data && Object.entries(data.thermals).map(([zone, val]) => {
+              const temp = getTemp(val);
+              return (
+                <div key={zone} className={`flex flex-col p-2 rounded border transition-colors ${getTempBg(temp)}`}>
+                  <span className="text-[10px] uppercase text-muted-foreground font-medium">{zone}</span>
+                  <span className={`text-sm font-mono ${getTempColor(temp)}`}>{temp.toFixed(1)}°C</span>
+                </div>
+              );
+            })}
           </div>
         </div>
 
