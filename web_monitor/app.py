@@ -95,6 +95,34 @@ def resolve_hostname(ip):
     except (socket.herror, socket.gaierror, socket.timeout):
         return None
 
+def run_stats_script():
+    """
+    Helper function to execute scripts/get_stats.py and return parsed JSON.
+    Returns (data, error_message).
+    """
+    script_path = os.path.join(basedir, 'scripts', 'get_stats.py')
+    if not os.path.exists(script_path):
+        script_path = os.path.abspath(os.path.join(basedir, '..', 'scripts', 'get_stats.py'))
+    
+    if not os.path.exists(script_path):
+        return None, f"Stats script not found at {script_path}"
+    
+    try:
+        # We specify the full path to python3 to be safe
+        result = subprocess.run(['python3', script_path], capture_output=True, text=True, timeout=10)
+        
+        if result.returncode != 0:
+            return None, f"Script failed (code {result.returncode}): {result.stderr}"
+        
+        if not result.stdout.strip():
+            return None, f"Empty output from stats script. Stderr: {result.stderr}"
+        
+        return json.loads(result.stdout), None
+    except subprocess.TimeoutExpired:
+        return None, "Stats script timed out"
+    except Exception as e:
+        return None, f"Exception running stats script: {str(e)}"
+
 @app.route('/api/local_network_status')
 def get_local_network_status():
     """
@@ -298,17 +326,11 @@ def get_jetson_gpu_info():
             return jsonify({'error': str(e)}), 500
     
     try:
-        script_path = os.path.join(basedir, 'scripts', 'get_stats.py')
-        if not os.path.exists(script_path):
-            script_path = os.path.abspath(os.path.join(basedir, '..', 'scripts', 'get_stats.py'))
+        raw_data, error = run_stats_script()
+        if error:
+            return jsonify({'error': error}), 500
         
-        result = subprocess.run(['python3', script_path], capture_output=True, text=True)
-        if result.returncode != 0:
-            return jsonify({'error': f"Script failed: {result.stderr}"}), 500
-        
-        raw_data = json.loads(result.stdout)
         stats = raw_data.get('stats', {})
-        
         total_ram_gb = psutil.virtual_memory().total / (1024**3)
         
         response_data = {
@@ -344,12 +366,9 @@ def get_hardware_sentinel():
             return jsonify({'error': str(e)}), 500
 
     try:
-        script_path = os.path.join(basedir, 'scripts', 'get_stats.py')
-        if not os.path.exists(script_path):
-            script_path = os.path.abspath(os.path.join(basedir, '..', 'scripts', 'get_stats.py'))
-        
-        result = subprocess.run(['python3', script_path], capture_output=True, text=True)
-        raw_data = json.loads(result.stdout)
+        raw_data, error = run_stats_script()
+        if error:
+            return jsonify({'error': error}), 500
         
         # Extract specific data for Sentinel
         stats = raw_data.get('stats', {})
